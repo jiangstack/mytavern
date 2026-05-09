@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -77,13 +76,18 @@ fun ChatDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val aiCharacter by viewModel.aiCharacter.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val streamingContent by viewModel.streamingContent.collectAsState()
+    val streamingReasoning by viewModel.streamingReasoning.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    val hasStreaming = streamingContent.isNotEmpty() || streamingReasoning.isNotEmpty() || isLoading
+    val itemCount = messages.size + if (hasStreaming) 1 else 0
+
+    LaunchedEffect(itemCount) {
+        if (itemCount > 0) {
+            listState.animateScrollToItem(itemCount - 1)
         }
     }
 
@@ -125,7 +129,7 @@ fun ChatDetailScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                if (messages.isEmpty()) {
+                if (messages.isEmpty() && !hasStreaming) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -150,17 +154,14 @@ fun ChatDetailScreen(
                                 aiName = aiCharacter?.name ?: "AI"
                             )
                         }
-                        if (isLoading) {
+                        if (hasStreaming) {
                             item {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Start
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.padding(8.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
+                                StreamingMessageBubble(
+                                    content = streamingContent,
+                                    reasoning = streamingReasoning,
+                                    isLoading = isLoading && streamingContent.isEmpty() && streamingReasoning.isEmpty(),
+                                    aiName = aiCharacter?.name ?: "AI"
+                                )
                             }
                         }
                     }
@@ -183,6 +184,10 @@ private fun MessageBubble(
     isUser: Boolean,
     aiName: String
 ) {
+    val displayContent = remember(message.content) {
+        parseThinkContent(message.content)
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
@@ -213,13 +218,119 @@ private fun MessageBubble(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
+
+                if (displayContent.reasoning.isNotEmpty()) {
+                    ThinkBlock(reasoning = displayContent.reasoning)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 Text(
-                    text = message.content,
+                    text = displayContent.content,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
     }
+}
+
+@Composable
+private fun StreamingMessageBubble(
+    content: String,
+    reasoning: String,
+    isLoading: Boolean,
+    aiName: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Card(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .padding(horizontal = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 4.dp,
+                bottomEnd = 16.dp
+            )
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = aiName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (reasoning.isNotEmpty()) {
+                    ThinkBlock(reasoning = reasoning)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (content.isNotEmpty()) {
+                    Text(
+                        text = content,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(top = 8.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThinkBlock(reasoning: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(
+                text = "思考",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = reasoning,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        }
+    }
+}
+
+private data class ParsedContent(
+    val reasoning: String,
+    val content: String
+)
+
+private fun parseThinkContent(raw: String): ParsedContent {
+    val thinkStart = raw.indexOf("<think>")
+    if (thinkStart == -1) {
+        return ParsedContent(reasoning = "", content = raw)
+    }
+    val thinkEnd = raw.indexOf("</think>")
+    if (thinkEnd == -1) {
+        return ParsedContent(reasoning = "", content = raw)
+    }
+    val reasoning = raw.substring(thinkStart + 7, thinkEnd).trim()
+    val content = raw.substring(thinkEnd + 8).trim()
+    return ParsedContent(reasoning = reasoning, content = content)
 }
 
 @Composable

@@ -1,8 +1,10 @@
 package org.jiangstack.mytavern.data.remote
 
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 import retrofit2.http.Url
 
 interface LlmApiService {
@@ -10,15 +12,24 @@ interface LlmApiService {
     @POST
     suspend fun chatCompletion(
         @Url url: String,
-        @Header("Authorization") authorization: String,
+        @Header("Authorization") authorization: String? = null,
         @Header("Content-Type") contentType: String = "application/json",
         @Body request: ChatCompletionRequest
     ): ChatCompletionResponse
 
+    @Streaming
+    @POST
+    suspend fun chatCompletionStream(
+        @Url url: String,
+        @Header("Authorization") authorization: String? = null,
+        @Header("Content-Type") contentType: String = "application/json",
+        @Body request: ChatCompletionRequest
+    ): ResponseBody
+
     @POST
     suspend fun chatCompletionAnthropic(
         @Url url: String,
-        @Header("x-api-key") apiKey: String,
+        @Header("x-api-key") apiKey: String? = null,
         @Header("anthropic-version") version: String = "2023-06-01",
         @Header("Content-Type") contentType: String = "application/json",
         @Body request: AnthropicRequest
@@ -75,4 +86,24 @@ data class AnthropicResponse(
 data class AnthropicContent(
     val type: String? = null,
     val text: String? = null
+)
+
+@kotlinx.serialization.Serializable
+data class ChatCompletionStreamResponse(
+    val id: String? = null,
+    val choices: List<StreamChoice>? = null
+)
+
+@kotlinx.serialization.Serializable
+data class StreamChoice(
+    val delta: Delta? = null,
+    val index: Int? = null,
+    val finish_reason: String? = null
+)
+
+@kotlinx.serialization.Serializable
+data class Delta(
+    val role: String? = null,
+    val content: String? = null,
+    val reasoning_content: String? = null
 )

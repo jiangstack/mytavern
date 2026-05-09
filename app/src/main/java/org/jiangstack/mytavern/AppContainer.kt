@@ -47,12 +47,15 @@ class AppContainer(context: Context) {
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())
 
-    private val okHttpClient: OkHttpClient by lazy {
+    val okHttpClient: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.HEADERS
         }
         OkHttpClient.Builder()
             .addInterceptor(logging)
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .build()
     }
 
@@ -69,6 +72,6 @@ class AppContainer(context: Context) {
         .create(LlmApiService::class.java)
 
     val llmService: LlmService by lazy {
-        LlmService(llmApiService, llmConfigRepository, userPreferencesRepository)
+        LlmService(llmApiService, llmConfigRepository, userPreferencesRepository, okHttpClient, json)
     }
 }

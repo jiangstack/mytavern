@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ChatMessage
 import org.jiangstack.mytavern.domain.model.ChatSession
-import org.jiangstack.mytavern.domain.model.WorldBook
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
@@ -50,6 +49,12 @@ class ChatDetailViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    private val _streamingContent = MutableStateFlow("")
+    val streamingContent: StateFlow<String> = _streamingContent
+
+    private val _streamingReasoning = MutableStateFlow("")
+    val streamingReasoning: StateFlow<String> = _streamingReasoning
+
     fun sendMessage(content: String) {
         viewModelScope.launch {
             _errorMessage.value = null
@@ -65,22 +70,50 @@ class ChatDetailViewModel(
             val systemPrompt = buildSystemPrompt(currentSession)
 
             _isLoading.value = true
-            val result = llmService.sendChatMessage(
-                messages = messages.value,
-                systemPrompt = systemPrompt
-            )
-            _isLoading.value = false
+            _streamingContent.value = ""
+            _streamingReasoning.value = ""
 
-            result.onSuccess { reply ->
+            try {
+                val fullContent = StringBuilder()
+                val fullReasoning = StringBuilder()
+                llmService.sendChatMessageStream(
+                    messages = messages.value,
+                    systemPrompt = systemPrompt
+                ).collect { chunk ->
+                    if (chunk.reasoningContent.isNotBlank()) {
+                        fullReasoning.append(chunk.reasoningContent)
+                        _streamingReasoning.value = fullReasoning.toString()
+                    }
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        _streamingContent.value = fullContent.toString()
+                    }
+                }
+
+                val finalContent = buildString {
+                    if (fullReasoning.isNotEmpty()) {
+                        append("<think>")
+                        append(fullReasoning)
+                        append("</think>")
+                        appendLine()
+                        appendLine()
+                    }
+                    append(fullContent)
+                }
+
                 val aiMessage = ChatMessage(
                     sessionId = sessionId,
                     senderId = currentSession.aiCharacterId,
                     senderName = aiCharacter.value?.name,
-                    content = reply
+                    content = finalContent
                 )
                 chatRepository.insertMessage(aiMessage)
-            }.onFailure { error ->
-                _errorMessage.value = error.message ?: "请求失败"
+                _streamingContent.value = ""
+                _streamingReasoning.value = ""
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "请求失败"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
