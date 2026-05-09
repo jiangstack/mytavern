@@ -16,6 +16,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -23,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import org.jiangstack.mytavern.domain.model.ThemeMode
 import org.jiangstack.mytavern.ui.navigation.NavGraph
 import org.jiangstack.mytavern.ui.navigation.Screen
 import org.jiangstack.mytavern.ui.theme.MyTavernTheme
@@ -30,8 +32,14 @@ import org.jiangstack.mytavern.ui.theme.MyTavernTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val container = (application as MyTavernApplication).container
+        val userPreferencesRepository = container.userPreferencesRepository
+
         setContent {
-            MyTavernTheme {
+            val themeMode by userPreferencesRepository.themeMode
+                .collectAsState(initial = ThemeMode.SYSTEM)
+
+            MyTavernTheme(themeMode = themeMode) {
                 MyTavernApp()
             }
         }

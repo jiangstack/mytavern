@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.CharacterType
 import org.jiangstack.mytavern.domain.model.LlmConfig
+import org.jiangstack.mytavern.domain.model.ThemeMode
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
@@ -26,6 +27,9 @@ class SettingsViewModel(
 
     val defaultLlmConfigId: StateFlow<Long?> = userPreferencesRepository.defaultLlmConfigId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val themeMode: StateFlow<ThemeMode> = userPreferencesRepository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
     val defaultUserCharacter = combine(
         userPreferencesRepository.defaultUserCharacterId,
@@ -62,6 +66,12 @@ class SettingsViewModel(
     fun setDefaultLlmConfig(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultLlmConfigId(id)
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            userPreferencesRepository.setThemeMode(mode)
         }
     }
 

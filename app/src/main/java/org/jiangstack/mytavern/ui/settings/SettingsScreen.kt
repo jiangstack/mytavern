@@ -50,6 +50,7 @@ import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.ApiType
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.LlmConfig
+import org.jiangstack.mytavern.domain.model.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +68,7 @@ fun SettingsScreen() {
     val userCharacters by viewModel.userCharacters.collectAsState()
     val configs by viewModel.configs.collectAsState()
     val defaultLlmConfigId by viewModel.defaultLlmConfigId.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
     var showLlmEditDialog by remember { mutableStateOf(false) }
@@ -135,6 +137,40 @@ fun SettingsScreen() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.settings_section_appearance),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_theme_mode),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ThemeModeSelector(
+                            selected = themeMode,
+                            onSelect = { viewModel.setThemeMode(it) }
+                        )
                     }
                 }
             }
@@ -399,6 +435,35 @@ private fun LlmConfigEditDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ThemeModeSelector(
+    selected: ThemeMode,
+    onSelect: (ThemeMode) -> Unit
+) {
+    val modes = listOf(ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.SYSTEM)
+    val labels = listOf(
+        stringResource(R.string.theme_mode_light),
+        stringResource(R.string.theme_mode_dark),
+        stringResource(R.string.theme_mode_system)
+    )
+    val selectedIndex = modes.indexOf(selected)
+
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        modes.forEachIndexed { index, mode ->
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = modes.size
+                ),
+                onClick = { onSelect(mode) },
+                selected = index == selectedIndex
+            ) {
+                Text(labels[index])
+            }
+        }
+    }
 }
 
 @Composable

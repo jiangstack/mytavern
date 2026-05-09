@@ -30,7 +30,12 @@
     <!-- Settings -->
     <string name="settings_section_user">用户</string>
     <string name="settings_section_llm">LLM</string>
+    <string name="settings_section_appearance">外观</string>
     <string name="settings_default_user_character">默认用户角色</string>
+    <string name="settings_theme_mode">主题模式</string>
+    <string name="theme_mode_light">浅色</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="theme_mode_system">跟随系统</string>
 
     <!-- World Book -->
     <string name="worldbook_create_title">创建世界书</string>
