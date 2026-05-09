@@ -23,11 +23,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +87,13 @@ fun ChatDetailScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val streamingContent by viewModel.streamingContent.collectAsState()
     val streamingReasoning by viewModel.streamingReasoning.collectAsState()
+    val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
+
+    val worldBooks by container.worldBookRepository.getAllWorldBooks()
+        .collectAsState(initial = emptyList())
+
+    var showWorldBookMenu by remember { mutableStateOf(false) }
+    var showWorldBookDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -113,6 +128,35 @@ fun ChatDetailScreen(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.toggleThinking() }) {
+                        Icon(
+                            imageVector = if (thinkingEnabled) Icons.Filled.Lightbulb else Icons.Outlined.Lightbulb,
+                            contentDescription = if (thinkingEnabled) "思考已开启" else "思考已关闭",
+                            tint = if (thinkingEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (worldBooks.isNotEmpty()) {
+                        IconButton(onClick = { showWorldBookMenu = true }) {
+                            Icon(
+                                Icons.Filled.MoreVert,
+                                contentDescription = "菜单"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showWorldBookMenu,
+                            onDismissRequest = { showWorldBookMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("设置世界书") },
+                                onClick = {
+                                    showWorldBookMenu = false
+                                    showWorldBookDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -152,7 +196,8 @@ fun ChatDetailScreen(
                             MessageBubble(
                                 message = message,
                                 isUser = message.senderId == null,
-                                aiName = aiCharacter?.name ?: "AI"
+                                aiName = aiCharacter?.name ?: "AI",
+                                thinkingEnabled = thinkingEnabled
                             )
                         }
                         if (hasStreaming) {
@@ -161,7 +206,8 @@ fun ChatDetailScreen(
                                     content = streamingContent,
                                     reasoning = streamingReasoning,
                                     isLoading = isLoading && streamingContent.isEmpty() && streamingReasoning.isEmpty(),
-                                    aiName = aiCharacter?.name ?: "AI"
+                                    aiName = aiCharacter?.name ?: "AI",
+                                    thinkingEnabled = thinkingEnabled
                                 )
                             }
                         }
@@ -180,13 +226,26 @@ fun ChatDetailScreen(
             )
         }
     }
+
+    if (showWorldBookDialog) {
+        SelectWorldBookDialog(
+            worldBooks = worldBooks,
+            currentWorldBookId = session?.worldBookId,
+            onDismiss = { showWorldBookDialog = false },
+            onConfirm = { worldBookId ->
+                viewModel.updateWorldBook(worldBookId)
+                showWorldBookDialog = false
+            }
+        )
+    }
 }
 
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
     isUser: Boolean,
-    aiName: String
+    aiName: String,
+    thinkingEnabled: Boolean
 ) {
     val displayContent = remember(message.content) {
         parseThinkContent(message.content)
@@ -223,7 +282,7 @@ private fun MessageBubble(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                if (displayContent.reasoning.isNotEmpty()) {
+                if (thinkingEnabled && displayContent.reasoning.isNotEmpty()) {
                     ThinkBlock(reasoning = displayContent.reasoning)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -242,7 +301,8 @@ private fun StreamingMessageBubble(
     content: String,
     reasoning: String,
     isLoading: Boolean,
-    aiName: String
+    aiName: String,
+    thinkingEnabled: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -270,7 +330,7 @@ private fun StreamingMessageBubble(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                if (reasoning.isNotEmpty()) {
+                if (thinkingEnabled && reasoning.isNotEmpty()) {
                     ThinkBlock(reasoning = reasoning)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -389,4 +449,63 @@ private fun ChatInputBar(
             )
         }
     }
+}
+
+@Composable
+private fun SelectWorldBookDialog(
+    worldBooks: List<org.jiangstack.mytavern.domain.model.WorldBook>,
+    currentWorldBookId: Long?,
+    onDismiss: () -> Unit,
+    onConfirm: (worldBookId: Long?) -> Unit
+) {
+    var selectedWorldBookId by remember { mutableStateOf(currentWorldBookId) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("设置世界书") },
+        text = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    RadioButton(
+                        selected = selectedWorldBookId == null,
+                        onClick = { selectedWorldBookId = null }
+                    )
+                    Text(
+                        text = "不使用世界书",
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+                worldBooks.forEach { worldBook ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedWorldBookId == worldBook.id,
+                            onClick = { selectedWorldBookId = worldBook.id }
+                        )
+                        Text(
+                            text = worldBook.name,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedWorldBookId) }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

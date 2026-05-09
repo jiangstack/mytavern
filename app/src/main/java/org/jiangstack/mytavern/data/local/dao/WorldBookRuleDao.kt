@@ -14,6 +14,9 @@ interface WorldBookRuleDao {
     @Query("SELECT * FROM world_book_rules WHERE worldBookId = :worldBookId ORDER BY id ASC")
     fun getByWorldBookId(worldBookId: Long): Flow<List<WorldBookRuleEntity>>
 
+    @Query("SELECT * FROM world_book_rules WHERE worldBookId = :worldBookId ORDER BY id ASC")
+    suspend fun getByWorldBookIdSync(worldBookId: Long): List<WorldBookRuleEntity>
+
     @Query("SELECT * FROM world_book_rules WHERE id = :id")
     suspend fun getById(id: Long): WorldBookRuleEntity?
 

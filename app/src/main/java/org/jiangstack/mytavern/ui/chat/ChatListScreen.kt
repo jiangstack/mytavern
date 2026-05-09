@@ -48,6 +48,7 @@ import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ChatSession
 import org.jiangstack.mytavern.domain.model.SessionType
+import org.jiangstack.mytavern.domain.model.WorldBook
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,12 +60,14 @@ fun ChatListScreen(
         factory = ChatListViewModel.factory(
             container.chatRepository,
             container.characterRepository,
+            container.worldBookRepository,
             container.userPreferencesRepository
         )
     )
 
     val sessions by viewModel.sessions.collectAsState()
     val aiCharacters by viewModel.aiCharacters.collectAsState()
+    val worldBooks by viewModel.worldBooks.collectAsState()
     val scope = rememberCoroutineScope()
 
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -122,10 +125,11 @@ fun ChatListScreen(
     if (showCreateDialog) {
         CreateChatDialog(
             aiCharacters = aiCharacters,
+            worldBooks = worldBooks,
             onDismiss = { showCreateDialog = false },
-            onConfirm = { aiCharacterId, title ->
+            onConfirm = { aiCharacterId, title, worldBookId ->
                 scope.launch {
-                    val sessionId = viewModel.createSession(aiCharacterId, title)
+                    val sessionId = viewModel.createSession(aiCharacterId, title, worldBookId)
                     showCreateDialog = false
                     onNavigateToChat(sessionId)
                 }
@@ -213,10 +217,12 @@ private fun ChatSessionItem(
 @Composable
 private fun CreateChatDialog(
     aiCharacters: List<Character>,
+    worldBooks: List<WorldBook>,
     onDismiss: () -> Unit,
-    onConfirm: (aiCharacterId: Long, title: String) -> Unit
+    onConfirm: (aiCharacterId: Long, title: String, worldBookId: Long?) -> Unit
 ) {
     var selectedCharacterId by remember { mutableStateOf<Long?>(null) }
+    var selectedWorldBookId by remember { mutableStateOf<Long?>(null) }
     var title by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -253,6 +259,43 @@ private fun CreateChatDialog(
                         }
                     }
                 }
+                if (worldBooks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "选择世界书（可选）",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedWorldBookId == null,
+                            onClick = { selectedWorldBookId = null }
+                        )
+                        Text(
+                            text = "不使用世界书",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    worldBooks.forEach { worldBook ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedWorldBookId == worldBook.id,
+                                onClick = { selectedWorldBookId = worldBook.id }
+                            )
+                            Text(
+                                text = worldBook.name,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.OutlinedTextField(
                     value = title,
@@ -267,7 +310,7 @@ private fun CreateChatDialog(
             TextButton(
                 onClick = {
                     selectedCharacterId?.let {
-                        onConfirm(it, title.ifBlank { "新聊天" })
+                        onConfirm(it, title.ifBlank { "新聊天" }, selectedWorldBookId)
                     }
                 },
                 enabled = selectedCharacterId != null

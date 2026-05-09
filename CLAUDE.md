@@ -1,26 +1,40 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # My tavern 我的酒馆
 
 安卓原生 AI 角色扮演应用。
 
-## 功能
+## 常用命令
 
-- **角色管理**：角色名称、角色描述、角色头像
-- **世界书管理**：世界名称、世界描述
-  - 规则：规则名称、规则描述、匹配方式
-- **LLM 接入**：兼容 OpenAI Chat API、OpenResponses API、Anthropic API
-- **聊天**：单聊、群聊
-- **对话分支**：支持对话分叉与回溯
-- **聊天背景**：自定义背景（单聊默认使用角色头像）
-- **主题**：多界面主题（暗黑、白天等）
-- **数据导出/导入**：全部数据支持导出和导入
+```bash
+# 构建 debug APK
+./gradlew :app:assembleDebug
+
+# 安装到连接的设备
+./gradlew :app:installDebug
+
+# 运行单元测试
+./gradlew :app:testDebugUnitTest
+
+# 运行单个单元测试类
+./gradlew :app:testDebugUnitTest --tests "org.jiangstack.mytavern.ExampleUnitTest"
+
+# 运行 instrumentation 测试
+./gradlew :app:connectedAndroidTest
+
+# 清理构建产物
+./gradlew clean
+```
 
 ## 技术栈
 
-- **UI**：Jetpack Compose + Material 3
+- **UI**：Jetpack Compose + Material 3（纯 Compose，无 XML Layout）
 - **架构**：MVVM + Repository 模式
-- **依赖注入**：手动 DI（AppContainer）
-- **导航**：Compose Navigation
-- **数据持久化**：Room + SQLite
+- **依赖注入**：手动 DI（`AppContainer.kt`）
+- **导航**：Compose Navigation（路由定义见 `ui/navigation/Screen.kt`）
+- **数据持久化**：Room + SQLite（版本 3，schema 导出至 `app/schemas`）
 - **网络请求**：Retrofit + OkHttp + kotlinx.serialization
 - **图片加载**：Coil
 - **异步**：Kotlin Coroutines + Flow
@@ -31,11 +45,12 @@
 org.jiangstack.mytavern
 ├── data/
 │   ├── local/          # Room 数据库、Entity、Dao
-│   ├── remote/         # LLM API 接口、Retrofit 配置
+│   ├── remote/         # LLM API 接口（OpenAI / OpenResponses / Anthropic）
 │   └── repository/     # Repository 实现
 ├── domain/
 │   ├── model/          # 业务实体（角色、世界书、对话等）
-│   └── repository/     # Repository 接口
+│   ├── repository/     # Repository 接口
+│   └── service/        # LLMService（流式/非流式请求、多 API 适配）
 ├── ui/
 │   ├── theme/          # 主题、颜色、字体
 │   ├── navigation/     # Compose Navigation 路由
@@ -43,58 +58,47 @@ org.jiangstack.mytavern
 │   ├── worldbook/      # 世界书管理界面
 │   ├── chat/           # 聊天界面
 │   └── settings/       # 设置界面
-├── AppContainer.kt     # 手动 DI 容器
+├── AppContainer.kt     # 手动 DI 容器：单例数据库、Repository、Retrofit、OkHttp
 ├── MyTavernApplication.kt
 └── MainActivity.kt
 ```
 
-## 数据模型
+## 依赖注入（AppContainer）
 
-### 角色 (Character)
-- id: Long
-- name: String
-- description: String
-- avatarUri: String?
+`AppContainer` 在 `MyTavernApplication` 中创建，通过 `LocalContext.current.applicationContext as MyTavernApplication` 在 Composable 中获取。不依赖 Hilt/Koin 等框架。
 
-### 世界书 (WorldBook)
-- id: Long
-- name: String
-- description: String
+## 导航路由
 
-### 规则 (WorldBookRule)
-- id: Long
-- worldBookId: Long (外键)
-- name: String
-- description: String
-- matchType: String (匹配方式)
+| 路由 | 说明 |
+|---|---|
+| `character_list` | 角色列表 |
+| `character_detail/{characterId}` | 角色详情/编辑 |
+| `worldbook_list` | 世界书列表 |
+| `worldbook_detail/{worldBookId}` | 世界书详情/编辑 |
+| `chat_list` | 聊天会话列表 |
+| `chat_detail/{sessionId}` | 聊天详情 |
+| `settings` | 设置 |
 
-### 对话会话 (ChatSession)
-- id: Long
-- type: String (单聊 / 群聊)
-- title: String
-- backgroundUri: String?
-- createdAt: Long
+## LLM 服务架构
 
-### 对话消息 (ChatMessage)
-- id: Long
-- sessionId: Long (外键)
-- senderId: Long? (角色 id，null 表示用户)
-- content: String
-- timestamp: Long
-- parentMessageId: Long? (用于分支)
+`LlmService` 统一处理三种 API：
+- **OpenAI Chat API**：标准 chat completions
+- **OpenResponses API**：OpenAI Responses API
+- **Anthropic API**：Messages API
 
-### LLM 配置 (LlmConfig)
-- id: Long
-- name: String
-- apiType: String (openai / openresponses / anthropic)
-- baseUrl: String
-- apiKey: String
-- model: String
+支持流式（`Flow<StreamChunk>`）和非流式响应。Retrofit baseUrl 默认为 `https://api.openai.com/`，实际请求 URL 由 `LlmConfig.baseUrl` 动态决定（通过 OkHttp 拦截器替换）。
+
+## Room 数据库
+
+- **数据库名**：`mytavern.db`
+- **当前版本**：3
+- **迁移**：`Migration_1_2`、`Migration_2_3`（位于 `data/local/`）
+- **schema 导出**：`ksp { arg("room.schemaLocation", "$projectDir/schemas") }`
 
 ## 导出/导入
 
-- 导出：将 Room 数据库文件复制到用户指定路径（.db 格式）
-- 导入：从 .db 文件恢复，替换当前数据库（需确认覆盖）
+- **导出**：将 Room 数据库文件复制到用户指定路径（`.db` 格式）
+- **导入**：从 `.db` 文件恢复，替换当前数据库（需确认覆盖）
 
 ## 开发规范
 

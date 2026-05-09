@@ -12,6 +12,7 @@ interface WorldBookRepository {
     suspend fun deleteWorldBook(worldBook: WorldBook)
 
     fun getRulesByWorldBookId(worldBookId: Long): Flow<List<WorldBookRule>>
+    suspend fun getRulesByWorldBookIdSync(worldBookId: Long): List<WorldBookRule>
     suspend fun insertRule(rule: WorldBookRule): Long
     suspend fun updateRule(rule: WorldBookRule)
     suspend fun deleteRule(rule: WorldBookRule)

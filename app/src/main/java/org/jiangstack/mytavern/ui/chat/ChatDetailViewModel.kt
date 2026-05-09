@@ -32,9 +32,8 @@ class ChatDetailViewModel(
     val messages: StateFlow<List<ChatMessage>> = chatRepository.getMessagesBySessionId(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val session: StateFlow<ChatSession?> = kotlinx.coroutines.flow.flow {
-        emit(chatRepository.getSessionById(sessionId))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    private val _session = MutableStateFlow<ChatSession?>(null)
+    val session: StateFlow<ChatSession?> = _session
 
     val aiCharacter: StateFlow<Character?> = session.flatMapLatest { session ->
         flow {
@@ -44,6 +43,12 @@ class ChatDetailViewModel(
             emit(character)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        viewModelScope.launch {
+            _session.value = chatRepository.getSessionById(sessionId)
+        }
+    }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -56,6 +61,9 @@ class ChatDetailViewModel(
 
     private val _streamingReasoning = MutableStateFlow("")
     val streamingReasoning: StateFlow<String> = _streamingReasoning
+
+    private val _thinkingEnabled = MutableStateFlow(true)
+    val thinkingEnabled: StateFlow<Boolean> = _thinkingEnabled
 
     private var currentJob: Job? = null
 
@@ -87,11 +95,13 @@ class ChatDetailViewModel(
             try {
                 val fullContent = StringBuilder()
                 val fullReasoning = StringBuilder()
+                val enableThinking = _thinkingEnabled.value
                 llmService.sendChatMessageStream(
                     messages = currentMessages,
-                    systemPrompt = systemPrompt
+                    systemPrompt = systemPrompt,
+                    thinkingEnabled = enableThinking
                 ).collect { chunk ->
-                    if (chunk.reasoningContent.isNotBlank()) {
+                    if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                         fullReasoning.append(chunk.reasoningContent)
                         _streamingReasoning.value = fullReasoning.toString()
                     }
@@ -102,7 +112,7 @@ class ChatDetailViewModel(
                 }
 
                 val finalContent = buildString {
-                    if (fullReasoning.isNotEmpty()) {
+                    if (enableThinking && fullReasoning.isNotEmpty()) {
                         append("<think>")
                         append(fullReasoning)
                         append("</think>")
@@ -140,6 +150,19 @@ class ChatDetailViewModel(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun toggleThinking() {
+        _thinkingEnabled.value = !_thinkingEnabled.value
+    }
+
+    fun updateWorldBook(worldBookId: Long?) {
+        viewModelScope.launch {
+            val currentSession = _session.value ?: return@launch
+            val updatedSession = currentSession.copy(worldBookId = worldBookId)
+            chatRepository.updateSession(updatedSession)
+            _session.value = updatedSession
+        }
     }
 
     private suspend fun buildSystemPrompt(session: ChatSession): String {

@@ -13,10 +13,12 @@ import org.jiangstack.mytavern.domain.model.SessionType
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
+import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 
 class ChatListViewModel(
     private val chatRepository: ChatRepository,
     private val characterRepository: CharacterRepository,
+    private val worldBookRepository: WorldBookRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -26,7 +28,10 @@ class ChatListViewModel(
     val aiCharacters: StateFlow<List<Character>> = characterRepository.getAiCharacters()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    suspend fun createSession(aiCharacterId: Long, title: String): Long {
+    val worldBooks: StateFlow<List<org.jiangstack.mytavern.domain.model.WorldBook>> = worldBookRepository.getAllWorldBooks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    suspend fun createSession(aiCharacterId: Long, title: String, worldBookId: Long? = null): Long {
         val userCharacterId = userPreferencesRepository.defaultUserCharacterId
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
             .value
@@ -35,7 +40,8 @@ class ChatListViewModel(
             type = SessionType.SINGLE,
             title = title,
             aiCharacterId = aiCharacterId,
-            userCharacterId = userCharacterId
+            userCharacterId = userCharacterId,
+            worldBookId = worldBookId
         )
         return chatRepository.insertSession(session)
     }
@@ -51,6 +57,7 @@ class ChatListViewModel(
         fun factory(
             chatRepository: ChatRepository,
             characterRepository: CharacterRepository,
+            worldBookRepository: WorldBookRepository,
             userPreferencesRepository: UserPreferencesRepository
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
@@ -59,6 +66,7 @@ class ChatListViewModel(
                     return ChatListViewModel(
                         chatRepository,
                         characterRepository,
+                        worldBookRepository,
                         userPreferencesRepository
                     ) as T
                 }

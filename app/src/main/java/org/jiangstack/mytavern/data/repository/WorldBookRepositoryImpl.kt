@@ -22,7 +22,9 @@ class WorldBookRepositoryImpl(
     }
 
     override suspend fun getWorldBookById(id: Long): WorldBook? {
-        return worldBookDao.getById(id)?.toDomain()
+        val entity = worldBookDao.getById(id) ?: return null
+        val rules = getRulesByWorldBookIdSync(id)
+        return entity.toDomain().copy(rules = rules)
     }
 
     override suspend fun insertWorldBook(worldBook: WorldBook): Long {
@@ -41,6 +43,10 @@ class WorldBookRepositoryImpl(
         return worldBookRuleDao.getByWorldBookId(worldBookId).map { list ->
             list.map { it.toDomain() }
         }
+    }
+
+    override suspend fun getRulesByWorldBookIdSync(worldBookId: Long): List<WorldBookRule> {
+        return worldBookRuleDao.getByWorldBookIdSync(worldBookId).map { it.toDomain() }
     }
 
     override suspend fun insertRule(rule: WorldBookRule): Long {

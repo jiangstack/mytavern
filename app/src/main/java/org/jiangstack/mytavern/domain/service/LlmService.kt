@@ -18,6 +18,7 @@ import org.jiangstack.mytavern.data.remote.ChatCompletionRequest
 import org.jiangstack.mytavern.data.remote.ChatCompletionStreamResponse
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.remote.Message
+import org.jiangstack.mytavern.data.remote.Reasoning
 import org.jiangstack.mytavern.domain.model.ApiType
 import org.jiangstack.mytavern.domain.model.ChatMessage
 import org.jiangstack.mytavern.domain.model.LlmConfig
@@ -35,7 +36,8 @@ class LlmService(
     suspend fun sendChatMessage(
         messages: List<ChatMessage>,
         systemPrompt: String,
-        config: LlmConfig? = null
+        config: LlmConfig? = null,
+        thinkingEnabled: Boolean = true
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val activeConfig = config ?: getDefaultConfig()
@@ -54,7 +56,8 @@ class LlmService(
                     )
                     val request = ChatCompletionRequest(
                         model = activeConfig.model,
-                        messages = requestMessages
+                        messages = requestMessages,
+                        reasoning = if (thinkingEnabled) null else Reasoning(effort = "none")
                     )
                     Log.d("LlmService", "非流式发送给 LLM 的请求: ${json.encodeToString(ChatCompletionRequest.serializer(), request)}")
                     val result = llmApiService.chatCompletion(
@@ -98,7 +101,8 @@ class LlmService(
     fun sendChatMessageStream(
         messages: List<ChatMessage>,
         systemPrompt: String,
-        config: LlmConfig? = null
+        config: LlmConfig? = null,
+        thinkingEnabled: Boolean = true
     ): Flow<StreamChunk> = flow {
         val activeConfig = config ?: getDefaultConfig()
             ?: throw IllegalStateException("没有可用的 LLM 配置")
@@ -117,7 +121,8 @@ class LlmService(
                 val chatRequest = ChatCompletionRequest(
                     model = activeConfig.model,
                     messages = requestMessages,
-                    stream = true
+                    stream = true,
+                    reasoning = if (thinkingEnabled) null else Reasoning(effort = "none")
                 )
                 val requestBodyString = json.encodeToString(
                     ChatCompletionRequest.serializer(),
@@ -165,7 +170,7 @@ class LlmService(
                                 Log.d("LlmService", "LLM 收到数据块: $data")
                                 val delta = streamResponse.choices?.firstOrNull()?.delta
                                 val content = delta?.content ?: ""
-                                val reasoning = delta?.reasoning_content ?: ""
+                                val reasoning = delta?.reasoning_content ?: delta?.reasoning ?: ""
                                 if (content.isNotBlank() || reasoning.isNotBlank()) {
                                     emit(StreamChunk(content = content, reasoningContent = reasoning))
                                 }

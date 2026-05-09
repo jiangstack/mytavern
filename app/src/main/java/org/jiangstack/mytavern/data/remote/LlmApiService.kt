@@ -40,7 +40,14 @@ interface LlmApiService {
 data class ChatCompletionRequest(
     val model: String,
     val messages: List<Message>,
-    val stream: Boolean = false
+    val stream: Boolean = false,
+    val reasoning: Reasoning? = null
+)
+
+@kotlinx.serialization.Serializable
+data class Reasoning(
+    val effort: String,
+    val summary: String? = null
 )
 
 @kotlinx.serialization.Serializable
@@ -105,5 +112,6 @@ data class StreamChoice(
 data class Delta(
     val role: String? = null,
     val content: String? = null,
-    val reasoning_content: String? = null
+    val reasoning_content: String? = null,
+    val reasoning: String? = null
 )
