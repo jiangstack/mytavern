@@ -54,32 +54,38 @@ fun MyTavernApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
 
-                topLevelRoutes.forEach { route ->
-                    NavigationBarItem(
-                        icon = { Icon(route.icon, contentDescription = stringResource(route.labelResId)) },
-                        label = { Text(stringResource(route.labelResId)) },
-                        selected = currentDestination?.route == route.screen.route,
-                        onClick = {
-                            navController.navigate(route.screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            val isTopLevelDestination = topLevelRoutes.any { route ->
+                currentDestination?.route == route.screen.route
+            }
+
+            if (isTopLevelDestination) {
+                NavigationBar {
+                    topLevelRoutes.forEach { route ->
+                        NavigationBarItem(
+                            icon = { Icon(route.icon, contentDescription = stringResource(route.labelResId)) },
+                            label = { Text(stringResource(route.labelResId)) },
+                            selected = currentDestination?.route == route.screen.route,
+                            onClick = {
+                                navController.navigate(route.screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         NavGraph(
             navController = navController,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         )
     }
 }

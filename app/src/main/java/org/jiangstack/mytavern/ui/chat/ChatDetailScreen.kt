@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -144,7 +145,7 @@ fun ChatDetailScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(messages, key = { it.id }) { message ->
@@ -172,7 +173,10 @@ fun ChatDetailScreen(
                 onSend = { content ->
                     viewModel.sendMessage(content)
                 },
-                enabled = !isLoading
+                isLoading = isLoading,
+                onCancel = {
+                    viewModel.cancelCurrentRequest()
+                }
             )
         }
     }
@@ -336,7 +340,8 @@ private fun parseThinkContent(raw: String): ParsedContent {
 @Composable
 private fun ChatInputBar(
     onSend: (String) -> Unit,
-    enabled: Boolean
+    isLoading: Boolean,
+    onCancel: () -> Unit
 ) {
     var text by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -352,11 +357,11 @@ private fun ChatInputBar(
             onValueChange = { text = it },
             placeholder = { Text(stringResource(R.string.chat_input_hint)) },
             modifier = Modifier.weight(1f),
-            enabled = enabled,
+            enabled = !isLoading,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(
                 onSend = {
-                    if (text.isNotBlank()) {
+                    if (text.isNotBlank() && !isLoading) {
                         onSend(text)
                         text = ""
                         keyboardController?.hide()
@@ -368,17 +373,19 @@ private fun ChatInputBar(
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(
             onClick = {
-                if (text.isNotBlank()) {
+                if (isLoading) {
+                    onCancel()
+                } else if (text.isNotBlank()) {
                     onSend(text)
                     text = ""
                     keyboardController?.hide()
                 }
             },
-            enabled = enabled && text.isNotBlank()
+            enabled = isLoading || text.isNotBlank()
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringResource(R.string.chat_send)
+                if (isLoading) Icons.Filled.Close else Icons.AutoMirrored.Filled.Send,
+                contentDescription = if (isLoading) "取消" else stringResource(R.string.chat_send)
             )
         }
     }

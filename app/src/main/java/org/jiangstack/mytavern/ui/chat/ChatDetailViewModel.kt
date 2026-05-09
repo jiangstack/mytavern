@@ -3,6 +3,8 @@ package org.jiangstack.mytavern.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -55,17 +57,26 @@ class ChatDetailViewModel(
     private val _streamingReasoning = MutableStateFlow("")
     val streamingReasoning: StateFlow<String> = _streamingReasoning
 
+    private var currentJob: Job? = null
+
     fun sendMessage(content: String) {
-        viewModelScope.launch {
+        if (currentJob?.isActive == true) {
+            cancelCurrentRequest()
+            return
+        }
+        currentJob = viewModelScope.launch {
             _errorMessage.value = null
 
             val currentSession = session.value ?: return@launch
 
+            // 先获取当前所有消息，再加上新消息
+            val currentMessages = messages.value.toMutableList()
             val userMessage = ChatMessage(
                 sessionId = sessionId,
                 content = content
             )
-            chatRepository.insertMessage(userMessage)
+            val userMessageId = chatRepository.insertMessage(userMessage)
+            currentMessages.add(userMessage.copy(id = userMessageId))
 
             val systemPrompt = buildSystemPrompt(currentSession)
 
@@ -77,7 +88,7 @@ class ChatDetailViewModel(
                 val fullContent = StringBuilder()
                 val fullReasoning = StringBuilder()
                 llmService.sendChatMessageStream(
-                    messages = messages.value,
+                    messages = currentMessages,
                     systemPrompt = systemPrompt
                 ).collect { chunk ->
                     if (chunk.reasoningContent.isNotBlank()) {
@@ -110,12 +121,21 @@ class ChatDetailViewModel(
                 chatRepository.insertMessage(aiMessage)
                 _streamingContent.value = ""
                 _streamingReasoning.value = ""
+            } catch (e: CancellationException) {
+                _streamingContent.value = ""
+                _streamingReasoning.value = ""
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "请求失败"
             } finally {
                 _isLoading.value = false
+                currentJob = null
             }
         }
+    }
+
+    fun cancelCurrentRequest() {
+        currentJob?.cancel()
+        currentJob = null
     }
 
     fun clearError() {

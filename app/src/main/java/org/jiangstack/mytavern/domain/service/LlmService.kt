@@ -1,5 +1,6 @@
 package org.jiangstack.mytavern.domain.service
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -55,11 +56,14 @@ class LlmService(
                         model = activeConfig.model,
                         messages = requestMessages
                     )
-                    llmApiService.chatCompletion(
+                    Log.d("LlmService", "非流式发送给 LLM 的请求: ${json.encodeToString(ChatCompletionRequest.serializer(), request)}")
+                    val result = llmApiService.chatCompletion(
                         url = activeConfig.baseUrl,
                         authorization = activeConfig.apiKey.takeIf { it.isNotBlank() }?.let { "Bearer $it" },
                         request = request
-                    ).choices?.firstOrNull()?.message?.content
+                    )
+                    Log.d("LlmService", "非流式 LLM 响应: $result")
+                    result.choices?.firstOrNull()?.message?.content
                 }
 
                 ApiType.ANTHROPIC -> {
@@ -74,11 +78,14 @@ class LlmService(
                         messages = anthropicMessages,
                         system = systemPrompt
                     )
-                    llmApiService.chatCompletionAnthropic(
+                    Log.d("LlmService", "Anthropic 发送给 LLM 的请求: ${json.encodeToString(AnthropicRequest.serializer(), request)}")
+                    val result = llmApiService.chatCompletionAnthropic(
                         url = activeConfig.baseUrl,
                         apiKey = activeConfig.apiKey.takeIf { it.isNotBlank() },
                         request = request
-                    ).content?.firstOrNull()?.text
+                    )
+                    Log.d("LlmService", "Anthropic LLM 响应: $result")
+                    result.content?.firstOrNull()?.text
                 }
             }
 
@@ -112,10 +119,12 @@ class LlmService(
                     messages = requestMessages,
                     stream = true
                 )
-                val requestBody = json.encodeToString(
+                val requestBodyString = json.encodeToString(
                     ChatCompletionRequest.serializer(),
                     chatRequest
-                ).toRequestBody("application/json".toMediaType())
+                )
+                Log.d("LlmService", "发送给 LLM 的请求: $requestBodyString")
+                val requestBody = requestBodyString.toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
                     .url(activeConfig.baseUrl)
@@ -131,20 +140,29 @@ class LlmService(
 
                 okHttpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
+                        val errorBody = response.body?.string() ?: ""
+                        Log.e("LlmService", "LLM 请求失败: HTTP ${response.code}, 响应: $errorBody")
                         throw java.io.IOException("HTTP ${response.code}")
                     }
+                    Log.d("LlmService", "LLM 开始返回流式响应")
+                    val fullResponse = StringBuilder()
                     response.body?.source()?.use { source ->
                         while (!source.exhausted()) {
                             val line = source.readUtf8Line() ?: break
+                            fullResponse.appendLine(line)
                             if (!line.startsWith("data: ")) continue
                             val data = line.removePrefix("data: ").trim()
-                            if (data == "[DONE]") break
+                            if (data == "[DONE]") {
+                                Log.d("LlmService", "LLM 响应完成")
+                                break
+                            }
                             if (data.isBlank()) continue
                             try {
                                 val streamResponse = json.decodeFromString(
                                     ChatCompletionStreamResponse.serializer(),
                                     data
                                 )
+                                Log.d("LlmService", "LLM 收到数据块: $data")
                                 val delta = streamResponse.choices?.firstOrNull()?.delta
                                 val content = delta?.content ?: ""
                                 val reasoning = delta?.reasoning_content ?: ""
@@ -154,6 +172,7 @@ class LlmService(
                             } catch (_: Exception) {
                             }
                         }
+                        Log.d("LlmService", "LLM 完整响应: ${fullResponse.toString()}")
                     }
                 }
             }
