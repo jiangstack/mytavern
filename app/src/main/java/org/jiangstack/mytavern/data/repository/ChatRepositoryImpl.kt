@@ -61,6 +61,7 @@ class ChatRepositoryImpl(
         type = SessionType.valueOf(type),
         title = title,
         backgroundUri = backgroundUri,
+        userCharacterId = userCharacterId,
         createdAt = createdAt
     )
 
@@ -69,6 +70,7 @@ class ChatRepositoryImpl(
         type = type.name,
         title = title,
         backgroundUri = backgroundUri,
+        userCharacterId = userCharacterId,
         createdAt = createdAt
     )
 
@@ -76,6 +78,7 @@ class ChatRepositoryImpl(
         id = id,
         sessionId = sessionId,
         senderId = senderId,
+        senderName = senderName,
         content = content,
         timestamp = timestamp,
         parentMessageId = parentMessageId
@@ -85,6 +88,7 @@ class ChatRepositoryImpl(
         id = id,
         sessionId = sessionId,
         senderId = senderId,
+        senderName = senderName,
         content = content,
         timestamp = timestamp,
         parentMessageId = parentMessageId

@@ -9,5 +9,6 @@ data class CharacterEntity(
     val id: Long = 0,
     val name: String,
     val description: String,
-    val avatarUri: String? = null
+    val avatarUri: String? = null,
+    val type: String = "AI"
 )

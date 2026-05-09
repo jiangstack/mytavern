@@ -5,6 +5,7 @@ data class ChatSession(
     val type: SessionType,
     val title: String,
     val backgroundUri: String? = null,
+    val userCharacterId: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 

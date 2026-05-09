@@ -10,4 +10,31 @@
     <string name="worldbook_list_title">世界书管理</string>
     <string name="chat_list_title">聊天</string>
     <string name="settings_title">设置</string>
+
+    <!-- Character -->
+    <string name="character_type_user">用户角色</string>
+    <string name="character_type_ai">AI 角色</string>
+    <string name="character_set_default">设为默认</string>
+    <string name="character_default_label">默认</string>
+    <string name="character_filter_all">全部</string>
+    <string name="character_list_empty">暂无角色，点击右下角添加</string>
+    <string name="character_list_empty_user">暂无用户角色，请先创建一个</string>
+    <string name="character_create_title">创建角色</string>
+    <string name="character_edit_title">编辑角色</string>
+    <string name="character_name">角色名称</string>
+    <string name="character_description">角色描述</string>
+    <string name="character_delete_title">删除角色</string>
+    <string name="character_delete_message">确定要删除角色「%1$s」吗？</string>
+    <string name="character_not_set">未设置</string>
+
+    <!-- Settings -->
+    <string name="settings_section_user">用户</string>
+    <string name="settings_section_llm">LLM</string>
+    <string name="settings_default_user_character">默认用户角色</string>
+
+    <!-- Common -->
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="close">关闭</string>
 </resources>

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.map
 import org.jiangstack.mytavern.data.local.dao.CharacterDao
 import org.jiangstack.mytavern.data.local.entity.CharacterEntity
 import org.jiangstack.mytavern.domain.model.Character
+import org.jiangstack.mytavern.domain.model.CharacterType
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 
 class CharacterRepositoryImpl(
@@ -16,6 +17,16 @@ class CharacterRepositoryImpl(
             list.map { it.toDomain() }
         }
     }
+
+    override fun getCharactersByType(type: CharacterType): Flow<List<Character>> {
+        return characterDao.getByType(type.name).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override fun getUserCharacters(): Flow<List<Character>> = getCharactersByType(CharacterType.USER)
+
+    override fun getAiCharacters(): Flow<List<Character>> = getCharactersByType(CharacterType.AI)
 
     override suspend fun getCharacterById(id: Long): Character? {
         return characterDao.getById(id)?.toDomain()
@@ -37,13 +48,15 @@ class CharacterRepositoryImpl(
         id = id,
         name = name,
         description = description,
-        avatarUri = avatarUri
+        avatarUri = avatarUri,
+        type = CharacterType.valueOf(type)
     )
 
     private fun Character.toEntity() = CharacterEntity(
         id = id,
         name = name,
         description = description,
-        avatarUri = avatarUri
+        avatarUri = avatarUri,
+        type = type.name
     )
 }
