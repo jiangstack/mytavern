@@ -62,6 +62,8 @@ class ChatRepositoryImpl(
         title = title,
         backgroundUri = backgroundUri,
         userCharacterId = userCharacterId,
+        aiCharacterId = aiCharacterId,
+        worldBookId = worldBookId,
         createdAt = createdAt
     )
 
@@ -71,6 +73,8 @@ class ChatRepositoryImpl(
         title = title,
         backgroundUri = backgroundUri,
         userCharacterId = userCharacterId,
+        aiCharacterId = aiCharacterId,
+        worldBookId = worldBookId,
         createdAt = createdAt
     )
 

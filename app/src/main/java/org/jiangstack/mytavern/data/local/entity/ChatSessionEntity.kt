@@ -11,5 +11,7 @@ data class ChatSessionEntity(
     val title: String,
     val backgroundUri: String? = null,
     val userCharacterId: Long? = null,
+    val aiCharacterId: Long? = null,
+    val worldBookId: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

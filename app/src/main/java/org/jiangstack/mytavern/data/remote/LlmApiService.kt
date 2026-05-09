@@ -55,7 +55,8 @@ data class Choice(
 data class AnthropicRequest(
     val model: String,
     val messages: List<AnthropicMessage>,
-    val max_tokens: Int = 2048
+    val max_tokens: Int = 2048,
+    val system: String? = null
 )
 
 @kotlinx.serialization.Serializable

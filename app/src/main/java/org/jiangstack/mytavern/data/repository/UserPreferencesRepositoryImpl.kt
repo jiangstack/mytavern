@@ -17,6 +17,7 @@ class UserPreferencesRepositoryImpl(
 ) : UserPreferencesRepository {
 
     private val defaultUserCharacterIdKey = longPreferencesKey("default_user_character_id")
+    private val defaultLlmConfigIdKey = longPreferencesKey("default_llm_config_id")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -29,6 +30,21 @@ class UserPreferencesRepositoryImpl(
                 preferences[defaultUserCharacterIdKey] = id
             } else {
                 preferences.remove(defaultUserCharacterIdKey)
+            }
+        }
+    }
+
+    override val defaultLlmConfigId: Flow<Long?> = context.dataStore.data
+        .map { preferences ->
+            preferences[defaultLlmConfigIdKey]
+        }
+
+    override suspend fun setDefaultLlmConfigId(id: Long?) {
+        context.dataStore.edit { preferences ->
+            if (id != null) {
+                preferences[defaultLlmConfigIdKey] = id
+            } else {
+                preferences.remove(defaultLlmConfigIdKey)
             }
         }
     }

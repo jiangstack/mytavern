@@ -24,7 +24,7 @@ import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
         ChatMessageEntity::class,
         LlmConfigEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

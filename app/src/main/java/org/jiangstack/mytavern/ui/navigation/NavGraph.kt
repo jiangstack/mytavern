@@ -11,6 +11,9 @@ import org.jiangstack.mytavern.ui.chat.ChatListScreen
 import org.jiangstack.mytavern.ui.settings.SettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 
+import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
+import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
@@ -37,11 +40,27 @@ fun NavGraph(
             )
         }
 
+        composable(Screen.WorldBookDetail.route) { backStackEntry ->
+            val worldBookId = backStackEntry.arguments?.getString("worldBookId")?.toLongOrNull() ?: 0L
+            WorldBookDetailScreen(
+                worldBookId = worldBookId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Screen.ChatList.route) {
             ChatListScreen(
                 onNavigateToChat = { sessionId ->
                     navController.navigate(Screen.ChatDetail.createRoute(sessionId))
                 }
+            )
+        }
+
+        composable(Screen.ChatDetail.route) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId")?.toLongOrNull() ?: 0L
+            ChatDetailScreen(
+                sessionId = sessionId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

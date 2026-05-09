@@ -32,6 +32,48 @@
     <string name="settings_section_llm">LLM</string>
     <string name="settings_default_user_character">默认用户角色</string>
 
+    <!-- World Book -->
+    <string name="worldbook_create_title">创建世界书</string>
+    <string name="worldbook_edit_title">编辑世界书</string>
+    <string name="worldbook_name">世界书名称</string>
+    <string name="worldbook_description">世界书描述</string>
+    <string name="worldbook_delete_title">删除世界书</string>
+    <string name="worldbook_delete_message">确定要删除世界书「%1$s」吗？</string>
+    <string name="worldbook_list_empty">暂无世界书，点击右下角添加</string>
+    <string name="worldbook_detail_title">世界书详情</string>
+    <string name="worldbook_rules_title">规则</string>
+    <string name="worldbook_rule_create_title">创建规则</string>
+    <string name="worldbook_rule_edit_title">编辑规则</string>
+    <string name="worldbook_rule_name">规则名称</string>
+    <string name="worldbook_rule_description">规则描述</string>
+    <string name="worldbook_rule_match_type">匹配类型</string>
+    <string name="worldbook_rule_delete_title">删除规则</string>
+    <string name="worldbook_rule_delete_message">确定要删除规则「%1$s」吗？</string>
+
+    <!-- LLM Config -->
+    <string name="llm_config_create_title">创建 LLM 配置</string>
+    <string name="llm_config_edit_title">编辑 LLM 配置</string>
+    <string name="llm_config_name">配置名称</string>
+    <string name="llm_config_api_type">API 类型</string>
+    <string name="llm_config_base_url">Base URL</string>
+    <string name="llm_config_api_key">API Key</string>
+    <string name="llm_config_model">模型名称</string>
+    <string name="llm_config_delete_title">删除配置</string>
+    <string name="llm_config_delete_message">确定要删除配置「%1$s」吗？</string>
+    <string name="llm_config_list_empty">暂无 LLM 配置</string>
+    <string name="llm_config_default_label">默认</string>
+    <string name="llm_config_set_default">设为默认</string>
+
+    <!-- Chat -->
+    <string name="chat_create_title">创建聊天</string>
+    <string name="chat_select_ai_character">选择 AI 角色</string>
+    <string name="chat_input_hint">输入消息...</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_list_empty">暂无聊天记录，点击右下角开始新聊天</string>
+    <string name="chat_delete_title">删除聊天</string>
+    <string name="chat_delete_message">确定要删除聊天「%1$s」吗？</string>
+    <string name="chat_new_chat">新聊天</string>
+
     <!-- Common -->
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>
