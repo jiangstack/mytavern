@@ -1,0 +1,14 @@
+package org.jiangstack.mytavern.domain.model
+
+data class ChatSession(
+    val id: Long = 0,
+    val type: SessionType,
+    val title: String,
+    val backgroundUri: String? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+enum class SessionType {
+    SINGLE,
+    GROUP
+}

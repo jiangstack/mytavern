@@ -1,0 +1,62 @@
+package org.jiangstack.mytavern
+
+import android.content.Context
+import androidx.room.Room
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import org.jiangstack.mytavern.data.local.AppDatabase
+import org.jiangstack.mytavern.data.remote.LlmApiService
+import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
+import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
+import org.jiangstack.mytavern.data.repository.LlmConfigRepositoryImpl
+import org.jiangstack.mytavern.data.repository.WorldBookRepositoryImpl
+import org.jiangstack.mytavern.domain.repository.CharacterRepository
+import org.jiangstack.mytavern.domain.repository.ChatRepository
+import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
+import org.jiangstack.mytavern.domain.repository.WorldBookRepository
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+
+class AppContainer(context: Context) {
+
+    private val database: AppDatabase = Room.databaseBuilder(
+        context,
+        AppDatabase::class.java,
+        "mytavern.db"
+    ).build()
+
+    val characterRepository: CharacterRepository =
+        CharacterRepositoryImpl(database.characterDao())
+
+    val worldBookRepository: WorldBookRepository =
+        WorldBookRepositoryImpl(database.worldBookDao(), database.worldBookRuleDao())
+
+    val chatRepository: ChatRepository =
+        ChatRepositoryImpl(database.chatSessionDao(), database.chatMessageDao())
+
+    val llmConfigRepository: LlmConfigRepository =
+        LlmConfigRepositoryImpl(database.llmConfigDao())
+
+    private val okHttpClient: OkHttpClient by lazy {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .build()
+    }
+
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
+    val llmApiService: LlmApiService = Retrofit.Builder()
+        .baseUrl("https://api.openai.com/")
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(LlmApiService::class.java)
+}

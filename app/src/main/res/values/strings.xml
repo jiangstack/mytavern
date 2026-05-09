@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">我的酒馆</string>
+
+    <string name="nav_chat">聊天</string>
+    <string name="nav_character">角色</string>
+    <string name="nav_worldbook">世界书</string>
+    <string name="nav_settings">设置</string>
+
+    <string name="character_list_title">角色管理</string>
+    <string name="worldbook_list_title">世界书管理</string>
+    <string name="chat_list_title">聊天</string>
+    <string name="settings_title">设置</string>
+</resources>
