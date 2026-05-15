@@ -26,6 +26,7 @@
     <string name="character_delete_title">删除角色</string>
     <string name="character_delete_message">确定要删除角色「%1$s」吗？</string>
     <string name="character_not_set">未设置</string>
+    <string name="character_select_avatar">选择头像</string>
 
     <!-- Settings -->
     <string name="settings_section_user">用户</string>

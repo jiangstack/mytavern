@@ -67,6 +67,12 @@ class ChatDetailViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val userCharacter: StateFlow<Character?> = userPreferencesRepository.defaultUserCharacterId
+        .flatMapLatest { id ->
+            flow { emit(id?.let { characterRepository.getCharacterById(it) }) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val historyCount: StateFlow<Int> = userPreferencesRepository.chatHistoryCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 12)
 

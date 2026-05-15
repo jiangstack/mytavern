@@ -1,6 +1,11 @@
 package org.jiangstack.mytavern.ui.character
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,9 +40,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -81,6 +83,20 @@ fun CharacterListScreen(
     var editingCharacter by remember { mutableStateOf<Character?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var characterToDelete by remember { mutableStateOf<Character?>(null) }
+    var editAvatarUri by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            editAvatarUri = it.toString()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -91,6 +107,7 @@ fun CharacterListScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 editingCharacter = null
+                editAvatarUri = null
                 showEditDialog = true
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Character")
@@ -102,10 +119,6 @@ fun CharacterListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            FilterRow(
-                onFilterSelected = { viewModel.setFilterType(it) }
-            )
-
             if (characters.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -129,6 +142,7 @@ fun CharacterListScreen(
                                     character.id == defaultUserCharacterId,
                             onClick = {
                                 editingCharacter = character
+                                editAvatarUri = character.avatarUri
                                 showEditDialog = true
                             },
                             onLongClick = {
@@ -148,6 +162,12 @@ fun CharacterListScreen(
     if (showEditDialog) {
         CharacterEditDialog(
             character = editingCharacter,
+            avatarUri = editAvatarUri,
+            onPickAvatar = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
             onDismiss = { showEditDialog = false },
             onConfirm = { character ->
                 viewModel.saveCharacter(character)
@@ -185,41 +205,6 @@ fun CharacterListScreen(
                 }
             }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterRow(
-    onFilterSelected: (CharacterType?) -> Unit
-) {
-    var selectedIndex by remember { mutableStateOf(0) }
-    val options = listOf(
-        null to stringResource(R.string.character_filter_all),
-        CharacterType.USER to stringResource(R.string.character_type_user),
-        CharacterType.AI to stringResource(R.string.character_type_ai)
-    )
-
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        options.forEachIndexed { index, (type, label) ->
-            SegmentedButton(
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = options.size
-                ),
-                onClick = {
-                    selectedIndex = index
-                    onFilterSelected(type)
-                },
-                selected = index == selectedIndex
-            ) {
-                Text(label)
-            }
-        }
     }
 }
 
@@ -336,6 +321,8 @@ private fun CharacterItem(
 @Composable
 private fun CharacterEditDialog(
     character: Character?,
+    avatarUri: String?,
+    onPickAvatar: () -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (Character) -> Unit
 ) {
@@ -354,7 +341,39 @@ private fun CharacterEditDialog(
             )
         },
         text = {
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onPickAvatar),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarUri != null) {
+                        AsyncImage(
+                            model = avatarUri,
+                            contentDescription = stringResource(R.string.character_select_avatar),
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = stringResource(R.string.character_select_avatar),
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.character_select_avatar),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -395,7 +414,7 @@ private fun CharacterEditDialog(
                             id = character?.id ?: 0,
                             name = name,
                             description = description,
-                            avatarUri = character?.avatarUri,
+                            avatarUri = avatarUri,
                             type = type
                         )
                     )
