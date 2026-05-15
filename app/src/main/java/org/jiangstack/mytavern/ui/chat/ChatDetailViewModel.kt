@@ -89,7 +89,7 @@ class ChatDetailViewModel(
     private val _streamingReasoning = MutableStateFlow("")
     val streamingReasoning: StateFlow<String> = _streamingReasoning
 
-    private val _thinkingEnabled = MutableStateFlow(true)
+    private val _thinkingEnabled = MutableStateFlow(false)
     val thinkingEnabled: StateFlow<Boolean> = _thinkingEnabled
 
     data class StreamingState(

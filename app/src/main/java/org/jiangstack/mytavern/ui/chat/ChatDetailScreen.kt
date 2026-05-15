@@ -498,7 +498,9 @@ private fun StreamingMessageBubble(
 
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .size(16.dp),
                         strokeWidth = 2.dp
                     )
                 }
