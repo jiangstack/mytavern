@@ -162,7 +162,7 @@ class ChatDetailViewModel(
 
     private suspend fun sendSingleMessage(session: ChatSession, currentMessages: List<ChatMessage>) {
         val states = sessionStates.value
-        val systemPrompt = buildSystemPrompt(session, states)
+        val systemPrompt = buildSystemPrompt(session)
         val enableState = session.sessionStateEnabled
         val tools = if (enableState) listOf(LlmService.rememberStateTool) else null
 
@@ -175,7 +175,11 @@ class ChatDetailViewModel(
             val fullReasoning = StringBuilder()
             var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
             val enableThinking = _thinkingEnabled.value
-            val messagesToSend = currentMessages.takeLast(historyCount.value)
+            val messagesToSend = appendStatesToMessages(
+                currentMessages.takeLast(historyCount.value),
+                states,
+                enableState
+            )
             var collectedToolCalls: List<org.jiangstack.mytavern.data.remote.ToolCall>? = null
 
             llmService.sendChatMessageStream(
@@ -272,14 +276,20 @@ class ChatDetailViewModel(
         _streamingStates.value += (targetCharacter.id to StreamingState())
 
         val states = sessionStates.value
-        val systemPrompt = buildGroupSystemPrompt(targetCharacter, allCharacters, states)
+        val systemPrompt = buildGroupSystemPrompt(targetCharacter, allCharacters)
         val enableState = session.value?.sessionStateEnabled == true
         val tools = if (enableState) listOf(LlmService.rememberStateTool) else null
 
+        val stateSection = buildStateSection(states, enableState)
+        val instructionContent = if (stateSection.isNotEmpty()) {
+            "请输出${targetCharacter.name}的回复\n\n${stateSection}"
+        } else {
+            "请输出${targetCharacter.name}的回复"
+        }
         val instructionMessage = ChatMessage(
             sessionId = sessionId,
             senderId = null,
-            content = "请输出${targetCharacter.name}的回复"
+            content = instructionContent
         )
         val historyMessages = currentMessages.takeLast(historyCount.value)
         val allMessages = historyMessages + instructionMessage
@@ -438,7 +448,11 @@ class ChatDetailViewModel(
             chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
             val currentSession = session.value ?: return@launch
             val currentMessages = chatRepository.getMessagesBySessionId(sessionId).stateIn(viewModelScope).value
-            val messagesToSend = currentMessages.takeLast(historyCount.value)
+            val messagesToSend = appendStatesToMessages(
+                currentMessages.takeLast(historyCount.value),
+                sessionStates.value,
+                currentSession.sessionStateEnabled
+            )
 
             if (currentSession.type == SessionType.SINGLE) {
                 val systemPrompt = buildSystemPrompt(currentSession)
@@ -518,7 +532,7 @@ class ChatDetailViewModel(
         }
     }
 
-    private suspend fun buildSystemPrompt(session: ChatSession, states: List<org.jiangstack.mytavern.domain.model.SessionState> = emptyList()): String {
+    private suspend fun buildSystemPrompt(session: ChatSession): String {
         val character = session.aiCharacterId?.let {
             characterRepository.getCharacterById(it)
         } ?: return ""
@@ -538,14 +552,14 @@ class ChatDetailViewModel(
                     appendLine("- ${rule.name}: ${rule.description}")
                 }
             }
-            appendSessionStateSection(states, session.sessionStateEnabled)
+            appendLine()
+            appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
         }
     }
 
     private suspend fun buildGroupSystemPrompt(
         targetCharacter: Character,
-        allCharacters: List<Character>,
-        states: List<org.jiangstack.mytavern.domain.model.SessionState> = emptyList()
+        allCharacters: List<Character>
     ): String {
         val worldBook = session.value?.worldBookId?.let {
             worldBookRepository.getWorldBookById(it)
@@ -567,21 +581,42 @@ class ChatDetailViewModel(
                     appendLine("- ${rule.name}: ${rule.description}")
                 }
             }
-            appendSessionStateSection(states, session.value?.sessionStateEnabled == true)
+            appendLine()
+            appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
         }
     }
 
-    private fun StringBuilder.appendSessionStateSection(states: List<org.jiangstack.mytavern.domain.model.SessionState>, enabled: Boolean) {
-        if (!enabled) return
-        appendLine()
-        appendLine("【当前会话状态】")
-        if (states.isEmpty()) {
-            appendLine("（暂无记录的状态）")
-        } else {
-            states.forEach { appendLine("- ${it.key}: ${it.value}") }
+    private fun buildStateSection(states: List<org.jiangstack.mytavern.domain.model.SessionState>, enabled: Boolean): String {
+        if (!enabled) return ""
+        return buildString {
+            appendLine("【当前会话状态】")
+            if (states.isEmpty()) {
+                appendLine("（暂无记录的状态）")
+            } else {
+                states.forEach { appendLine("- ${it.key}: ${it.value}") }
+            }
         }
-        appendLine()
-        appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
+    }
+
+    private fun appendStatesToMessages(
+        messages: List<ChatMessage>,
+        states: List<org.jiangstack.mytavern.domain.model.SessionState>,
+        enabled: Boolean
+    ): List<ChatMessage> {
+        if (!enabled || messages.isEmpty()) return messages
+        val stateSection = buildStateSection(states, enabled)
+        if (stateSection.isEmpty()) return messages
+
+        val lastIndex = messages.indexOfLast { it.senderId == null }
+        if (lastIndex == -1) return messages
+
+        return messages.mapIndexed { index, message ->
+            if (index == lastIndex) {
+                message.copy(content = message.content + "\n\n" + stateSection)
+            } else {
+                message
+            }
+        }
     }
 
     private suspend fun handleToolCalls(toolCalls: List<org.jiangstack.mytavern.data.remote.ToolCall>) {

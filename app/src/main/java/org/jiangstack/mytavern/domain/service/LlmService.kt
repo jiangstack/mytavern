@@ -49,7 +49,7 @@ class LlmService(
                 description = "记录或更新当前会话中角色的状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。",
                 parameters = ToolParameters(
                     properties = mapOf(
-                        "state_key" to ToolProperty("string", "状态名称，如'心情'、'位置'、'关系'等"),
+                        "state_key" to ToolProperty("string", "状态名称，由角色名和状态名组成，如'张三心情'、'李四位置'、'张三与李四关系'等"),
                         "state_value" to ToolProperty("string", "状态的详细描述")
                     ),
                     required = listOf("state_key", "state_value")
