@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,8 +24,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -94,6 +97,8 @@ fun ChatDetailScreen(
 
     var showWorldBookMenu by remember { mutableStateOf(false) }
     var showWorldBookDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -197,7 +202,16 @@ fun ChatDetailScreen(
                                 message = message,
                                 isUser = message.senderId == null,
                                 aiName = aiCharacter?.name ?: "AI",
-                                thinkingEnabled = thinkingEnabled
+                                thinkingEnabled = thinkingEnabled,
+                                onRefresh = if (!isLoading) {
+                                    { viewModel.regenerateMessage(message) }
+                                } else null,
+                                onEdit = if (!isLoading) {
+                                    {
+                                        editingMessage = message
+                                        showEditDialog = true
+                                    }
+                                } else null
                             )
                         }
                         if (hasStreaming) {
@@ -238,6 +252,21 @@ fun ChatDetailScreen(
             }
         )
     }
+
+    if (showEditDialog && editingMessage != null) {
+        EditMessageDialog(
+            initialContent = editingMessage!!.content,
+            onDismiss = {
+                showEditDialog = false
+                editingMessage = null
+            },
+            onConfirm = { newContent ->
+                editingMessage?.let { viewModel.editMessage(it, newContent) }
+                showEditDialog = false
+                editingMessage = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -245,15 +274,17 @@ private fun MessageBubble(
     message: ChatMessage,
     isUser: Boolean,
     aiName: String,
-    thinkingEnabled: Boolean
+    thinkingEnabled: Boolean,
+    onRefresh: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null
 ) {
     val displayContent = remember(message.content) {
         parseThinkContent(message.content)
     }
 
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
         Card(
             modifier = Modifier
@@ -291,6 +322,39 @@ private fun MessageBubble(
                     text = displayContent.content,
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+        }
+
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!isUser && onRefresh != null) {
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "重新生成",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (isUser && onEdit != null) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "编辑",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -498,6 +562,41 @@ private fun SelectWorldBookDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(selectedWorldBookId) }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditMessageDialog(
+    initialContent: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var content by remember { mutableStateOf(initialContent) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑消息") },
+        text = {
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 6
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(content) },
+                enabled = content.isNotBlank()
             ) {
                 Text(stringResource(R.string.confirm))
             }

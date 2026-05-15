@@ -48,8 +48,16 @@ class ChatRepositoryImpl(
         return chatMessageDao.insert(message.toEntity())
     }
 
+    override suspend fun updateMessage(message: ChatMessage) {
+        chatMessageDao.update(message.toEntity())
+    }
+
     override suspend fun deleteMessage(message: ChatMessage) {
         chatMessageDao.delete(message.toEntity())
+    }
+
+    override suspend fun deleteMessagesAfter(sessionId: Long, timestamp: Long) {
+        chatMessageDao.deleteBySessionIdAndTimestampAfter(sessionId, timestamp)
     }
 
     override suspend fun deleteMessagesBySessionId(sessionId: Long) {

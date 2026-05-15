@@ -165,6 +165,78 @@ class ChatDetailViewModel(
         }
     }
 
+    fun regenerateMessage(message: ChatMessage) {
+        if (message.senderId == null) return
+        viewModelScope.launch {
+            chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
+            val currentSession = session.value ?: return@launch
+            val currentMessages = chatRepository.getMessagesBySessionId(sessionId).stateIn(viewModelScope).value
+            val systemPrompt = buildSystemPrompt(currentSession)
+
+            _isLoading.value = true
+            _streamingContent.value = ""
+            _streamingReasoning.value = ""
+
+            try {
+                val fullContent = StringBuilder()
+                val fullReasoning = StringBuilder()
+                val enableThinking = _thinkingEnabled.value
+                llmService.sendChatMessageStream(
+                    messages = currentMessages,
+                    systemPrompt = systemPrompt,
+                    thinkingEnabled = enableThinking
+                ).collect { chunk ->
+                    if (enableThinking && chunk.reasoningContent.isNotBlank()) {
+                        fullReasoning.append(chunk.reasoningContent)
+                        _streamingReasoning.value = fullReasoning.toString()
+                    }
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        _streamingContent.value = fullContent.toString()
+                    }
+                }
+
+                val finalContent = buildString {
+                    if (enableThinking && fullReasoning.isNotEmpty()) {
+                        append("<think>")
+                        append(fullReasoning)
+                        append("</think>")
+                        appendLine()
+                        appendLine()
+                    }
+                    append(fullContent)
+                }
+
+                val aiMessage = ChatMessage(
+                    sessionId = sessionId,
+                    senderId = currentSession.aiCharacterId,
+                    senderName = aiCharacter.value?.name,
+                    content = finalContent
+                )
+                chatRepository.insertMessage(aiMessage)
+                _streamingContent.value = ""
+                _streamingReasoning.value = ""
+            } catch (e: CancellationException) {
+                _streamingContent.value = ""
+                _streamingReasoning.value = ""
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "请求失败"
+            } finally {
+                _isLoading.value = false
+                currentJob = null
+            }
+        }
+    }
+
+    fun editMessage(message: ChatMessage, newContent: String) {
+        if (message.senderId != null) return
+        viewModelScope.launch {
+            chatRepository.updateMessage(message.copy(content = newContent))
+            chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
+            sendMessage(newContent)
+        }
+    }
+
     private suspend fun buildSystemPrompt(session: ChatSession): String {
         val character = session.aiCharacterId?.let {
             characterRepository.getCharacterById(it)

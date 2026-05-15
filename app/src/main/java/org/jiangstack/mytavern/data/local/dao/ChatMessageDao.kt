@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 
@@ -22,9 +23,15 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(messages: List<ChatMessageEntity>)
 
+    @Update
+    suspend fun update(message: ChatMessageEntity)
+
     @Delete
     suspend fun delete(message: ChatMessageEntity)
 
     @Query("DELETE FROM chat_messages WHERE sessionId = :sessionId")
     suspend fun deleteBySessionId(sessionId: Long)
+
+    @Query("DELETE FROM chat_messages WHERE sessionId = :sessionId AND timestamp >= :timestamp")
+    suspend fun deleteBySessionIdAndTimestampAfter(sessionId: Long, timestamp: Long)
 }

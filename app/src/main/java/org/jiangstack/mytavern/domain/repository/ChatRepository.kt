@@ -13,6 +13,8 @@ interface ChatRepository {
 
     fun getMessagesBySessionId(sessionId: Long): Flow<List<ChatMessage>>
     suspend fun insertMessage(message: ChatMessage): Long
+    suspend fun updateMessage(message: ChatMessage)
     suspend fun deleteMessage(message: ChatMessage)
+    suspend fun deleteMessagesAfter(sessionId: Long, timestamp: Long)
     suspend fun deleteMessagesBySessionId(sessionId: Long)
 }

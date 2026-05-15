@@ -79,6 +79,15 @@
     <string name="chat_delete_message">确定要删除聊天「%1$s」吗？</string>
     <string name="chat_new_chat">新聊天</string>
 
+    <!-- Debug -->
+    <string name="settings_section_debug">调试</string>
+    <string name="settings_http_log">HTTP 日志</string>
+    <string name="http_log_title">HTTP 日志</string>
+    <string name="http_log_empty">暂无 HTTP 请求日志</string>
+    <string name="http_log_clear">清空</string>
+    <string name="http_log_request">请求</string>
+    <string name="http_log_response">响应</string>
+
     <!-- Common -->
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>

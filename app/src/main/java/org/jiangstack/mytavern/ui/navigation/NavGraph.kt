@@ -12,6 +12,7 @@ import org.jiangstack.mytavern.ui.settings.SettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
+import org.jiangstack.mytavern.ui.settings.HttpLogScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
 
 @Composable
@@ -65,7 +66,17 @@ fun NavGraph(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen()
+            SettingsScreen(
+                onNavigateToHttpLog = {
+                    navController.navigate(Screen.HttpLog.route)
+                }
+            )
+        }
+
+        composable(Screen.HttpLog.route) {
+            HttpLogScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

@@ -5,7 +5,8 @@ import androidx.room.Room
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
+import org.jiangstack.mytavern.data.remote.HttpLogInterceptor
+import org.jiangstack.mytavern.data.repository.HttpLogRepository
 import org.jiangstack.mytavern.data.local.AppDatabase
 import org.jiangstack.mytavern.data.local.MIGRATION_1_2
 import org.jiangstack.mytavern.data.local.MIGRATION_2_3
@@ -47,12 +48,11 @@ class AppContainer(context: Context) {
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())
 
+    val httpLogRepository: HttpLogRepository = HttpLogRepository()
+
     val okHttpClient: OkHttpClient by lazy {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.HEADERS
-        }
         OkHttpClient.Builder()
-            .addInterceptor(logging)
+            .addInterceptor(HttpLogInterceptor(httpLogRepository))
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
