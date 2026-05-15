@@ -292,6 +292,17 @@ class ChatDetailViewModel(
         _streamingReasoning.value = ""
     }
 
+    fun triggerCharacterReply(characterId: Long) {
+        if (groupChatJobs.any { it.value.isActive }) return
+
+        viewModelScope.launch {
+            val chars = groupCharacters.value
+            val targetChar = chars.find { it.id == characterId } ?: return@launch
+            val currentMessages = messages.value
+            sendGroupMessageForCharacter(targetChar, chars, currentMessages)
+        }
+    }
+
     fun clearError() {
         _errorMessage.value = null
     }

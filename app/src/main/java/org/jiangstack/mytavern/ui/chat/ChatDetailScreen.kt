@@ -2,6 +2,7 @@ package org.jiangstack.mytavern.ui.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -235,6 +237,9 @@ fun ChatDetailScreen(
                                         messageToDelete = message
                                         showDeleteDialog = true
                                     }
+                                } else null,
+                                onTriggerCharacterReply = if (session?.type == SessionType.GROUP && !isLoading && activeGeneratingIds.isEmpty()) {
+                                    { message.senderId?.let { viewModel.triggerCharacterReply(it) } }
                                 } else null
                             )
                         }
@@ -348,7 +353,8 @@ private fun MessageBubble(
     thinkingEnabled: Boolean,
     onRefresh: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    onTriggerCharacterReply: (() -> Unit)? = null
 ) {
     val displayContent = remember(message.content) {
         parseThinkContent(message.content)
@@ -363,6 +369,19 @@ private fun MessageBubble(
             ),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
+        if (!isUser) {
+            Text(
+                text = message.senderName ?: aiName,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .padding(start = 8.dp, bottom = 2.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onDoubleTap = { onTriggerCharacterReply?.invoke() })
+                    }
+            )
+        }
+
         Card(
             modifier = Modifier
                 .widthIn(max = 280.dp)
@@ -381,15 +400,6 @@ private fun MessageBubble(
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                if (!isUser) {
-                    Text(
-                        text = message.senderName ?: aiName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
                 if (thinkingEnabled && displayContent.reasoning.isNotEmpty()) {
                     ThinkBlock(reasoning = displayContent.reasoning)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -458,10 +468,17 @@ private fun StreamingMessageBubble(
     aiName: String,
     thinkingEnabled: Boolean
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
+        horizontalAlignment = Alignment.Start
     ) {
+        Text(
+            text = aiName,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+        )
+
         Card(
             modifier = Modifier
                 .widthIn(max = 280.dp)
@@ -477,13 +494,6 @@ private fun StreamingMessageBubble(
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = aiName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
                 if (thinkingEnabled && reasoning.isNotEmpty()) {
                     ThinkBlock(reasoning = reasoning)
                     Spacer(modifier = Modifier.height(8.dp))
