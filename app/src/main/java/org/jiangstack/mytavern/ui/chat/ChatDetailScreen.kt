@@ -412,6 +412,19 @@ private fun MessageBubble(
             }
         }
 
+        if (!isUser && (message.promptTokens != null || message.completionTokens != null || message.totalTokens != null)) {
+            Text(
+                text = buildString {
+                    message.promptTokens?.let { append("提示: $it ") }
+                    message.completionTokens?.let { append("补全: $it ") }
+                    message.totalTokens?.let { append("总计: $it") }
+                }.trim(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+            )
+        }
+
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,

@@ -93,7 +93,10 @@ class ChatRepositoryImpl(
         senderName = senderName,
         content = content,
         timestamp = timestamp,
-        parentMessageId = parentMessageId
+        parentMessageId = parentMessageId,
+        promptTokens = promptTokens,
+        completionTokens = completionTokens,
+        totalTokens = totalTokens
     )
 
     private fun ChatMessage.toEntity() = ChatMessageEntity(
@@ -103,6 +106,9 @@ class ChatRepositoryImpl(
         senderName = senderName,
         content = content,
         timestamp = timestamp,
-        parentMessageId = parentMessageId
+        parentMessageId = parentMessageId,
+        promptTokens = promptTokens,
+        completionTokens = completionTokens,
+        totalTokens = totalTokens
     )
 }

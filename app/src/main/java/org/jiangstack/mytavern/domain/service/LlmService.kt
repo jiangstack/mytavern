@@ -19,6 +19,7 @@ import org.jiangstack.mytavern.data.remote.ChatCompletionStreamResponse
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.remote.Message
 import org.jiangstack.mytavern.data.remote.Reasoning
+import org.jiangstack.mytavern.data.remote.StreamOptions
 import org.jiangstack.mytavern.domain.model.ApiType
 import org.jiangstack.mytavern.domain.model.ChatMessage
 import org.jiangstack.mytavern.domain.model.LlmConfig
@@ -129,7 +130,8 @@ class LlmService(
                     messages = requestMessages,
                     stream = true,
                     temperature = temperature,
-                    reasoning = if (thinkingEnabled) null else Reasoning(effort = "none")
+                    reasoning = if (thinkingEnabled) null else Reasoning(effort = "none"),
+                    stream_options = StreamOptions(include_usage = true)
                 )
                 val requestBodyString = json.encodeToString(
                     ChatCompletionRequest.serializer(),
@@ -180,6 +182,9 @@ class LlmService(
                                 val reasoning = delta?.reasoning_content ?: delta?.reasoning ?: ""
                                 if (content.isNotBlank() || reasoning.isNotBlank()) {
                                     emit(StreamChunk(content = content, reasoningContent = reasoning))
+                                }
+                                streamResponse.usage?.let { usage ->
+                                    emit(StreamChunk(content = "", reasoningContent = "", usage = usage))
                                 }
                             } catch (_: Exception) {
                             }

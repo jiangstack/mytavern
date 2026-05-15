@@ -42,7 +42,13 @@ data class ChatCompletionRequest(
     val messages: List<Message>,
     val stream: Boolean = false,
     val temperature: Float? = null,
-    val reasoning: Reasoning? = null
+    val reasoning: Reasoning? = null,
+    val stream_options: StreamOptions? = null
+)
+
+@kotlinx.serialization.Serializable
+data class StreamOptions(
+    val include_usage: Boolean = true
 )
 
 @kotlinx.serialization.Serializable
@@ -60,7 +66,8 @@ data class Message(
 @kotlinx.serialization.Serializable
 data class ChatCompletionResponse(
     val id: String? = null,
-    val choices: List<Choice>? = null
+    val choices: List<Choice>? = null,
+    val usage: Usage? = null
 )
 
 @kotlinx.serialization.Serializable
@@ -100,7 +107,15 @@ data class AnthropicContent(
 @kotlinx.serialization.Serializable
 data class ChatCompletionStreamResponse(
     val id: String? = null,
-    val choices: List<StreamChoice>? = null
+    val choices: List<StreamChoice>? = null,
+    val usage: Usage? = null
+)
+
+@kotlinx.serialization.Serializable
+data class Usage(
+    val prompt_tokens: Int? = null,
+    val completion_tokens: Int? = null,
+    val total_tokens: Int? = null
 )
 
 @kotlinx.serialization.Serializable

@@ -161,6 +161,7 @@ class ChatDetailViewModel(
         try {
             val fullContent = StringBuilder()
             val fullReasoning = StringBuilder()
+            var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
             val enableThinking = _thinkingEnabled.value
             val messagesToSend = currentMessages.takeLast(historyCount.value)
             llmService.sendChatMessageStream(
@@ -176,6 +177,9 @@ class ChatDetailViewModel(
                 if (chunk.content.isNotBlank()) {
                     fullContent.append(chunk.content)
                     _streamingContent.value = fullContent.toString()
+                }
+                if (chunk.usage != null) {
+                    finalUsage = chunk.usage
                 }
             }
 
@@ -194,7 +198,10 @@ class ChatDetailViewModel(
                 sessionId = sessionId,
                 senderId = session.aiCharacterId,
                 senderName = aiCharacter.value?.name,
-                content = finalContent
+                content = finalContent,
+                promptTokens = finalUsage?.prompt_tokens,
+                completionTokens = finalUsage?.completion_tokens,
+                totalTokens = finalUsage?.total_tokens
             )
             chatRepository.insertMessage(aiMessage)
             _streamingContent.value = ""
@@ -231,6 +238,7 @@ class ChatDetailViewModel(
         try {
             val fullContent = StringBuilder()
             val fullReasoning = StringBuilder()
+            var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
             val enableThinking = _thinkingEnabled.value
 
             llmService.sendChatMessageStream(
@@ -245,6 +253,9 @@ class ChatDetailViewModel(
                 }
                 if (chunk.content.isNotBlank()) {
                     fullContent.append(chunk.content)
+                }
+                if (chunk.usage != null) {
+                    finalUsage = chunk.usage
                 }
                 _streamingStates.value = _streamingStates.value + (targetCharacter.id to StreamingState(
                     content = fullContent.toString(),
@@ -267,7 +278,10 @@ class ChatDetailViewModel(
                 sessionId = sessionId,
                 senderId = targetCharacter.id,
                 senderName = targetCharacter.name,
-                content = finalContent
+                content = finalContent,
+                promptTokens = finalUsage?.prompt_tokens,
+                completionTokens = finalUsage?.completion_tokens,
+                totalTokens = finalUsage?.total_tokens
             )
             chatRepository.insertMessage(aiMessage)
         } catch (_: CancellationException) {

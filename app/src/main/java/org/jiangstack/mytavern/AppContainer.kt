@@ -11,6 +11,7 @@ import org.jiangstack.mytavern.data.local.AppDatabase
 import org.jiangstack.mytavern.data.local.MIGRATION_1_2
 import org.jiangstack.mytavern.data.local.MIGRATION_2_3
 import org.jiangstack.mytavern.data.local.MIGRATION_3_4
+import org.jiangstack.mytavern.data.local.MIGRATION_4_5
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
@@ -34,7 +35,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)

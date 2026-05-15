@@ -7,5 +7,8 @@ data class ChatMessage(
     val senderName: String? = null,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val parentMessageId: Long? = null
+    val parentMessageId: Long? = null,
+    val promptTokens: Int? = null,
+    val completionTokens: Int? = null,
+    val totalTokens: Int? = null
 )
