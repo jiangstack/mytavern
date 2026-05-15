@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -612,7 +613,7 @@ private fun ChatInputBar(
     groupCharacters: List<Character> = emptyList(),
     isGroupChat: Boolean = false
 ) {
-    var text by remember { mutableStateOf("") }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var showMentionPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -637,17 +638,17 @@ private fun ChatInputBar(
             Spacer(modifier = Modifier.width(4.dp))
         }
         OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = textFieldValue,
+            onValueChange = { textFieldValue = it },
             placeholder = { Text(stringResource(R.string.chat_input_hint)) },
             modifier = Modifier.weight(1f),
             enabled = !isLoading,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(
                 onSend = {
-                    if (text.isNotBlank() && !isLoading) {
-                        onSend(text)
-                        text = ""
+                    if (textFieldValue.text.isNotBlank() && !isLoading) {
+                        onSend(textFieldValue.text)
+                        textFieldValue = TextFieldValue("")
                         keyboardController?.hide()
                     }
                 }
@@ -659,13 +660,13 @@ private fun ChatInputBar(
             onClick = {
                 if (isLoading) {
                     onCancel()
-                } else if (text.isNotBlank()) {
-                    onSend(text)
-                    text = ""
+                } else if (textFieldValue.text.isNotBlank()) {
+                    onSend(textFieldValue.text)
+                    textFieldValue = TextFieldValue("")
                     keyboardController?.hide()
                 }
             },
-            enabled = isLoading || text.isNotBlank()
+            enabled = isLoading || textFieldValue.text.isNotBlank()
         ) {
             Icon(
                 if (isLoading) Icons.Filled.Close else Icons.AutoMirrored.Filled.Send,
@@ -678,7 +679,11 @@ private fun ChatInputBar(
         MentionPickerDialog(
             characters = groupCharacters,
             onSelect = { charName ->
-                text = "$text@$charName "
+                val newText = "${textFieldValue.text}@$charName "
+                textFieldValue = TextFieldValue(
+                    text = newText,
+                    selection = androidx.compose.ui.text.TextRange(newText.length)
+                )
                 showMentionPicker = false
             },
             onDismiss = { showMentionPicker = false }
