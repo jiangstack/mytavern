@@ -13,16 +13,19 @@ import org.jiangstack.mytavern.data.local.MIGRATION_2_3
 import org.jiangstack.mytavern.data.local.MIGRATION_3_4
 import org.jiangstack.mytavern.data.local.MIGRATION_4_5
 import org.jiangstack.mytavern.data.local.MIGRATION_5_6
+import org.jiangstack.mytavern.data.local.MIGRATION_6_7
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
 import org.jiangstack.mytavern.data.repository.LlmConfigRepositoryImpl
+import org.jiangstack.mytavern.data.repository.QuickReplyRepositoryImpl
 import org.jiangstack.mytavern.data.repository.SessionCharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.UserPreferencesRepositoryImpl
 import org.jiangstack.mytavern.data.repository.WorldBookRepositoryImpl
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
+import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
@@ -36,7 +39,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -55,6 +58,9 @@ class AppContainer(context: Context) {
 
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())
+
+    val quickReplyRepository: QuickReplyRepository =
+        QuickReplyRepositoryImpl(database.quickReplyDao())
 
     val sessionStateRepository: org.jiangstack.mytavern.domain.repository.SessionStateRepository =
         org.jiangstack.mytavern.data.repository.SessionStateRepositoryImpl(database.sessionStateDao())

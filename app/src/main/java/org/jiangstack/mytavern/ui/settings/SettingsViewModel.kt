@@ -11,15 +11,18 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.CharacterType
 import org.jiangstack.mytavern.domain.model.LlmConfig
+import org.jiangstack.mytavern.domain.model.QuickReply
 import org.jiangstack.mytavern.domain.model.ThemeMode
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
+import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 
 class SettingsViewModel(
     private val llmConfigRepository: LlmConfigRepository,
     private val characterRepository: CharacterRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val quickReplyRepository: QuickReplyRepository
 ) : ViewModel() {
 
     val configs: StateFlow<List<LlmConfig>> = llmConfigRepository.getAllConfigs()
@@ -46,6 +49,9 @@ class SettingsViewModel(
 
     val temperature: StateFlow<Float> = userPreferencesRepository.temperature
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+
+    val quickReplies: StateFlow<List<QuickReply>> = quickReplyRepository.getAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setDefaultUserCharacter(id: Long?) {
         viewModelScope.launch {
@@ -93,11 +99,28 @@ class SettingsViewModel(
         }
     }
 
+    fun saveQuickReply(quickReply: QuickReply) {
+        viewModelScope.launch {
+            if (quickReply.id == 0L) {
+                quickReplyRepository.insert(quickReply)
+            } else {
+                quickReplyRepository.update(quickReply)
+            }
+        }
+    }
+
+    fun deleteQuickReply(quickReply: QuickReply) {
+        viewModelScope.launch {
+            quickReplyRepository.delete(quickReply)
+        }
+    }
+
     companion object {
         fun factory(
             llmConfigRepository: LlmConfigRepository,
             characterRepository: CharacterRepository,
-            userPreferencesRepository: UserPreferencesRepository
+            userPreferencesRepository: UserPreferencesRepository,
+            quickReplyRepository: QuickReplyRepository
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -105,7 +128,8 @@ class SettingsViewModel(
                     return SettingsViewModel(
                         llmConfigRepository,
                         characterRepository,
-                        userPreferencesRepository
+                        userPreferencesRepository,
+                        quickReplyRepository
                     ) as T
                 }
             }

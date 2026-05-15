@@ -51,6 +51,7 @@ import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.ApiType
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.LlmConfig
+import org.jiangstack.mytavern.domain.model.QuickReply
 import org.jiangstack.mytavern.domain.model.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +64,8 @@ fun SettingsScreen(
         factory = SettingsViewModel.factory(
             container.llmConfigRepository,
             container.characterRepository,
-            container.userPreferencesRepository
+            container.userPreferencesRepository,
+            container.quickReplyRepository
         )
     )
 
@@ -74,12 +76,17 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val chatHistoryCount by viewModel.chatHistoryCount.collectAsState()
     val temperature by viewModel.temperature.collectAsState()
+    val quickReplies by viewModel.quickReplies.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
     var showLlmEditDialog by remember { mutableStateOf(false) }
     var editingLlmConfig by remember { mutableStateOf<LlmConfig?>(null) }
     var showLlmDeleteDialog by remember { mutableStateOf(false) }
     var llmConfigToDelete by remember { mutableStateOf<LlmConfig?>(null) }
+    var showQuickReplyEditDialog by remember { mutableStateOf(false) }
+    var editingQuickReply by remember { mutableStateOf<QuickReply?>(null) }
+    var showQuickReplyDeleteDialog by remember { mutableStateOf(false) }
+    var quickReplyToDelete by remember { mutableStateOf<QuickReply?>(null) }
 
     Scaffold(
         topBar = {
@@ -204,7 +211,7 @@ fun SettingsScreen(
                     }
                 }
             } else {
-                items(configs, key = { it.id }) { config ->
+                items(configs, key = { "llm_${it.id}" }) { config ->
                     LlmConfigItem(
                         config = config,
                         isDefault = config.id == defaultLlmConfigId,
@@ -280,6 +287,60 @@ fun SettingsScreen(
                             steps = 19
                         )
                     }
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_section_quick_reply),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    TextButton(
+                        onClick = {
+                            editingQuickReply = null
+                            showQuickReplyEditDialog = true
+                        }
+                    ) {
+                        Text(stringResource(R.string.quick_reply_add))
+                    }
+                }
+            }
+
+            if (quickReplies.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.quick_reply_list_empty),
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                items(quickReplies, key = { "qr_${it.id}" }) { reply ->
+                    QuickReplyItem(
+                        reply = reply,
+                        onClick = {
+                            editingQuickReply = reply
+                            showQuickReplyEditDialog = true
+                        },
+                        onLongClick = {
+                            quickReplyToDelete = reply
+                            showQuickReplyDeleteDialog = true
+                        }
+                    )
                 }
             }
 
@@ -371,6 +432,48 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLlmDeleteDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showQuickReplyEditDialog) {
+        QuickReplyEditDialog(
+            reply = editingQuickReply,
+            onDismiss = { showQuickReplyEditDialog = false },
+            onConfirm = { reply ->
+                viewModel.saveQuickReply(reply)
+                showQuickReplyEditDialog = false
+            }
+        )
+    }
+
+    if (showQuickReplyDeleteDialog && quickReplyToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showQuickReplyDeleteDialog = false },
+            title = { Text(stringResource(R.string.quick_reply_delete_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.quick_reply_delete_message,
+                        quickReplyToDelete!!.label
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteQuickReply(quickReplyToDelete!!)
+                        showQuickReplyDeleteDialog = false
+                        quickReplyToDelete = null
+                    }
+                ) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuickReplyDeleteDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -618,6 +721,105 @@ private fun CharacterPickerDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun QuickReplyItem(
+    reply: QuickReply,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = reply.label,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = reply.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickReplyEditDialog(
+    reply: QuickReply?,
+    onDismiss: () -> Unit,
+    onConfirm: (QuickReply) -> Unit
+) {
+    var label by remember { mutableStateOf(reply?.label ?: "") }
+    var message by remember { mutableStateOf(reply?.message ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (reply == null)
+                    stringResource(R.string.quick_reply_create_title)
+                else
+                    stringResource(R.string.quick_reply_edit_title)
+            )
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text(stringResource(R.string.quick_reply_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = { Text(stringResource(R.string.quick_reply_message)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        QuickReply(
+                            id = reply?.id ?: 0,
+                            label = label,
+                            message = message
+                        )
+                    )
+                },
+                enabled = label.isNotBlank() && message.isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         }
     )

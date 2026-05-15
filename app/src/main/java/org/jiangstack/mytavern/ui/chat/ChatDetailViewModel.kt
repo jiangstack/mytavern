@@ -23,6 +23,7 @@ import org.jiangstack.mytavern.domain.model.SessionType
 import org.jiangstack.mytavern.domain.model.WorldBook
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
+import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.SessionStateRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
@@ -38,6 +39,7 @@ class ChatDetailViewModel(
     private val llmService: LlmService,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val sessionStateRepository: SessionStateRepository,
+    private val quickReplyRepository: QuickReplyRepository,
     private val sessionId: Long
 ) : ViewModel() {
 
@@ -84,6 +86,10 @@ class ChatDetailViewModel(
 
     val sessionStates: StateFlow<List<org.jiangstack.mytavern.domain.model.SessionState>> =
         sessionStateRepository.getBySessionId(sessionId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val quickReplies: StateFlow<List<org.jiangstack.mytavern.domain.model.QuickReply>> =
+        quickReplyRepository.getAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -663,6 +669,7 @@ class ChatDetailViewModel(
             llmService: LlmService,
             userPreferencesRepository: UserPreferencesRepository,
             sessionStateRepository: SessionStateRepository,
+            quickReplyRepository: QuickReplyRepository,
             sessionId: Long
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
@@ -676,6 +683,7 @@ class ChatDetailViewModel(
                         llmService,
                         userPreferencesRepository,
                         sessionStateRepository,
+                        quickReplyRepository,
                         sessionId
                     ) as T
                 }

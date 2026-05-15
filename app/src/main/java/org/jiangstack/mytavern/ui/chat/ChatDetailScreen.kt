@@ -3,6 +3,7 @@ package org.jiangstack.mytavern.ui.chat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,6 +56,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -97,6 +101,7 @@ fun ChatDetailScreen(
             container.llmService,
             container.userPreferencesRepository,
             container.sessionStateRepository,
+            container.quickReplyRepository,
             sessionId
         )
     )
@@ -115,10 +120,12 @@ fun ChatDetailScreen(
     val sessionStateEnabled by viewModel.sessionStateEnabled.collectAsState()
     val sessionStates by viewModel.sessionStates.collectAsState()
     val userCharacter by viewModel.userCharacter.collectAsState()
+    val quickReplies by viewModel.quickReplies.collectAsState()
 
     val worldBooks by container.worldBookRepository.getAllWorldBooks()
         .collectAsState(initial = emptyList())
 
+    var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var showWorldBookMenu by remember { mutableStateOf(false) }
     var showWorldBookDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -308,9 +315,30 @@ fun ChatDetailScreen(
                 }
             }
 
+            if (quickReplies.isNotEmpty() || (session?.type == SessionType.GROUP && groupCharacters.isNotEmpty())) {
+                QuickReplyBar(
+                    characters = groupCharacters,
+                    quickReplies = quickReplies,
+                    isGroupChat = session?.type == SessionType.GROUP,
+                    isLoading = isLoading || activeGeneratingIds.isNotEmpty(),
+                    onTriggerCharacterReply = { characterId ->
+                        viewModel.triggerCharacterReply(characterId)
+                    },
+                    onQuickReplyClick = { message ->
+                        inputText = TextFieldValue(
+                            text = message,
+                            selection = androidx.compose.ui.text.TextRange(message.length)
+                        )
+                    }
+                )
+            }
+
             ChatInputBar(
+                textFieldValue = inputText,
+                onTextChange = { inputText = it },
                 onSend = { content ->
                     viewModel.sendMessage(content)
+                    inputText = TextFieldValue("")
                 },
                 isLoading = isLoading || activeGeneratingIds.isNotEmpty(),
                 onCancel = {
@@ -680,14 +708,66 @@ private fun parseThinkContent(raw: String): ParsedContent {
 }
 
 @Composable
+private fun QuickReplyBar(
+    characters: List<Character>,
+    quickReplies: List<org.jiangstack.mytavern.domain.model.QuickReply>,
+    isGroupChat: Boolean,
+    isLoading: Boolean,
+    onTriggerCharacterReply: (Long) -> Unit,
+    onQuickReplyClick: (String) -> Unit
+) {
+    val scrollState = rememberScrollState()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isGroupChat) {
+            characters.forEach { character ->
+                AssistChip(
+                    onClick = { if (!isLoading) onTriggerCharacterReply(character.id) },
+                    enabled = !isLoading,
+                    label = { Text(character.name) },
+                    leadingIcon = {
+                        if (character.avatarUri != null) {
+                            AsyncImage(
+                                model = character.avatarUri,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                )
+            }
+        }
+
+        quickReplies.forEach { reply ->
+            SuggestionChip(
+                onClick = { onQuickReplyClick(reply.message) },
+                enabled = !isLoading,
+                label = { Text(reply.label) }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ChatInputBar(
+    textFieldValue: TextFieldValue,
+    onTextChange: (TextFieldValue) -> Unit,
     onSend: (String) -> Unit,
     isLoading: Boolean,
     onCancel: () -> Unit,
     groupCharacters: List<Character> = emptyList(),
     isGroupChat: Boolean = false
 ) {
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var showMentionPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -713,7 +793,7 @@ private fun ChatInputBar(
         }
         OutlinedTextField(
             value = textFieldValue,
-            onValueChange = { textFieldValue = it },
+            onValueChange = { onTextChange(it) },
             placeholder = { Text(stringResource(R.string.chat_input_hint)) },
             modifier = Modifier.weight(1f),
             enabled = !isLoading,
@@ -722,7 +802,7 @@ private fun ChatInputBar(
                 onSend = {
                     if (textFieldValue.text.isNotBlank() && !isLoading) {
                         onSend(textFieldValue.text)
-                        textFieldValue = TextFieldValue("")
+                        onTextChange(TextFieldValue(""))
                         keyboardController?.hide()
                     }
                 }
@@ -736,7 +816,7 @@ private fun ChatInputBar(
                     onCancel()
                 } else if (textFieldValue.text.isNotBlank()) {
                     onSend(textFieldValue.text)
-                    textFieldValue = TextFieldValue("")
+                    onTextChange(TextFieldValue(""))
                     keyboardController?.hide()
                 }
             },
@@ -754,9 +834,11 @@ private fun ChatInputBar(
             characters = groupCharacters,
             onSelect = { charName ->
                 val newText = "${textFieldValue.text}@$charName "
-                textFieldValue = TextFieldValue(
-                    text = newText,
-                    selection = androidx.compose.ui.text.TextRange(newText.length)
+                onTextChange(
+                    TextFieldValue(
+                        text = newText,
+                        selection = androidx.compose.ui.text.TextRange(newText.length)
+                    )
                 )
                 showMentionPicker = false
             },
