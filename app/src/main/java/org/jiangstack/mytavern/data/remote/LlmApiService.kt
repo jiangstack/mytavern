@@ -43,7 +43,9 @@ data class ChatCompletionRequest(
     val stream: Boolean = false,
     val temperature: Float? = null,
     val reasoning: Reasoning? = null,
-    val stream_options: StreamOptions? = null
+    val stream_options: StreamOptions? = null,
+    val tools: List<Tool>? = null,
+    val tool_choice: String? = null
 )
 
 @kotlinx.serialization.Serializable
@@ -60,7 +62,10 @@ data class Reasoning(
 @kotlinx.serialization.Serializable
 data class Message(
     val role: String,
-    val content: String
+    val content: String? = null,
+    val tool_calls: List<ToolCall>? = null,
+    val tool_call_id: String? = null,
+    val name: String? = null
 )
 
 @kotlinx.serialization.Serializable
@@ -130,5 +135,59 @@ data class Delta(
     val role: String? = null,
     val content: String? = null,
     val reasoning_content: String? = null,
-    val reasoning: String? = null
+    val reasoning: String? = null,
+    val tool_calls: List<ToolCallDelta>? = null
+)
+
+@kotlinx.serialization.Serializable
+data class Tool(
+    val type: String = "function",
+    val function: ToolFunction
+)
+
+@kotlinx.serialization.Serializable
+data class ToolFunction(
+    val name: String,
+    val description: String,
+    val parameters: ToolParameters
+)
+
+@kotlinx.serialization.Serializable
+data class ToolParameters(
+    val type: String = "object",
+    val properties: Map<String, ToolProperty>,
+    val required: List<String>
+)
+
+@kotlinx.serialization.Serializable
+data class ToolProperty(
+    val type: String,
+    val description: String
+)
+
+@kotlinx.serialization.Serializable
+data class ToolCall(
+    val id: String,
+    val type: String = "function",
+    val function: ToolCallFunction
+)
+
+@kotlinx.serialization.Serializable
+data class ToolCallFunction(
+    val name: String,
+    val arguments: String
+)
+
+@kotlinx.serialization.Serializable
+data class ToolCallDelta(
+    val index: Int,
+    val id: String? = null,
+    val type: String? = null,
+    val function: ToolCallFunctionDelta? = null
+)
+
+@kotlinx.serialization.Serializable
+data class ToolCallFunctionDelta(
+    val name: String? = null,
+    val arguments: String? = null
 )

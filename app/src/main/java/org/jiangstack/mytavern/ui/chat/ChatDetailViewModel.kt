@@ -24,6 +24,7 @@ import org.jiangstack.mytavern.domain.model.WorldBook
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
+import org.jiangstack.mytavern.domain.repository.SessionStateRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
@@ -36,6 +37,7 @@ class ChatDetailViewModel(
     private val sessionCharacterRepository: SessionCharacterRepository,
     private val llmService: LlmService,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val sessionStateRepository: SessionStateRepository,
     private val sessionId: Long
 ) : ViewModel() {
 
@@ -70,6 +72,13 @@ class ChatDetailViewModel(
 
     val temperature: StateFlow<Float> = userPreferencesRepository.temperature
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+
+    val sessionStateEnabled: StateFlow<Boolean> = _session.map { it?.sessionStateEnabled == true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val sessionStates: StateFlow<List<org.jiangstack.mytavern.domain.model.SessionState>> =
+        sessionStateRepository.getBySessionId(sessionId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -152,7 +161,10 @@ class ChatDetailViewModel(
     }
 
     private suspend fun sendSingleMessage(session: ChatSession, currentMessages: List<ChatMessage>) {
-        val systemPrompt = buildSystemPrompt(session)
+        val states = sessionStates.value
+        val systemPrompt = buildSystemPrompt(session, states)
+        val enableState = session.sessionStateEnabled
+        val tools = if (enableState) listOf(LlmService.rememberStateTool) else null
 
         _isLoading.value = true
         _streamingContent.value = ""
@@ -164,11 +176,14 @@ class ChatDetailViewModel(
             var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
             val enableThinking = _thinkingEnabled.value
             val messagesToSend = currentMessages.takeLast(historyCount.value)
+            var collectedToolCalls: List<org.jiangstack.mytavern.data.remote.ToolCall>? = null
+
             llmService.sendChatMessageStream(
                 messages = messagesToSend,
                 systemPrompt = systemPrompt,
                 thinkingEnabled = enableThinking,
-                temperature = temperature.value
+                temperature = temperature.value,
+                tools = tools
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
@@ -178,8 +193,39 @@ class ChatDetailViewModel(
                     fullContent.append(chunk.content)
                     _streamingContent.value = fullContent.toString()
                 }
+                if (chunk.toolCalls != null) {
+                    collectedToolCalls = chunk.toolCalls
+                }
                 if (chunk.usage != null) {
                     finalUsage = chunk.usage
+                }
+            }
+
+            // 处理 tool calls（保存状态）
+            collectedToolCalls?.let { handleToolCalls(it) }
+
+            // 如果只有 tool_calls 没有 content，发送第二次请求
+            if (fullContent.isEmpty() && collectedToolCalls != null) {
+                fullContent.clear()
+                fullReasoning.clear()
+                llmService.sendChatMessageStream(
+                    messages = messagesToSend,
+                    systemPrompt = systemPrompt,
+                    thinkingEnabled = enableThinking,
+                    temperature = temperature.value,
+                    tools = null
+                ).collect { chunk ->
+                    if (enableThinking && chunk.reasoningContent.isNotBlank()) {
+                        fullReasoning.append(chunk.reasoningContent)
+                        _streamingReasoning.value = fullReasoning.toString()
+                    }
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        _streamingContent.value = fullContent.toString()
+                    }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
                 }
             }
 
@@ -225,7 +271,10 @@ class ChatDetailViewModel(
         _activeGeneratingIds.value += targetCharacter.id
         _streamingStates.value += (targetCharacter.id to StreamingState())
 
-        val systemPrompt = buildGroupSystemPrompt(targetCharacter, allCharacters)
+        val states = sessionStates.value
+        val systemPrompt = buildGroupSystemPrompt(targetCharacter, allCharacters, states)
+        val enableState = session.value?.sessionStateEnabled == true
+        val tools = if (enableState) listOf(LlmService.rememberStateTool) else null
 
         val instructionMessage = ChatMessage(
             sessionId = sessionId,
@@ -240,19 +289,24 @@ class ChatDetailViewModel(
             val fullReasoning = StringBuilder()
             var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
             val enableThinking = _thinkingEnabled.value
+            var collectedToolCalls: List<org.jiangstack.mytavern.data.remote.ToolCall>? = null
 
             llmService.sendChatMessageStream(
                 messages = allMessages,
                 systemPrompt = systemPrompt,
                 thinkingEnabled = enableThinking,
                 isGroupChat = true,
-                temperature = temperature.value
+                temperature = temperature.value,
+                tools = tools
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
                 }
                 if (chunk.content.isNotBlank()) {
                     fullContent.append(chunk.content)
+                }
+                if (chunk.toolCalls != null) {
+                    collectedToolCalls = chunk.toolCalls
                 }
                 if (chunk.usage != null) {
                     finalUsage = chunk.usage
@@ -261,6 +315,35 @@ class ChatDetailViewModel(
                     content = fullContent.toString(),
                     reasoning = fullReasoning.toString()
                 ))
+            }
+
+            collectedToolCalls?.let { handleToolCalls(it) }
+
+            if (fullContent.isEmpty() && collectedToolCalls != null) {
+                fullContent.clear()
+                fullReasoning.clear()
+                llmService.sendChatMessageStream(
+                    messages = allMessages,
+                    systemPrompt = systemPrompt,
+                    thinkingEnabled = enableThinking,
+                    isGroupChat = true,
+                    temperature = temperature.value,
+                    tools = null
+                ).collect { chunk ->
+                    if (enableThinking && chunk.reasoningContent.isNotBlank()) {
+                        fullReasoning.append(chunk.reasoningContent)
+                    }
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                    }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
+                    _streamingStates.value = _streamingStates.value + (targetCharacter.id to StreamingState(
+                        content = fullContent.toString(),
+                        reasoning = fullReasoning.toString()
+                    ))
+                }
             }
 
             val finalContent = buildString {
@@ -323,6 +406,21 @@ class ChatDetailViewModel(
 
     fun toggleThinking() {
         _thinkingEnabled.value = !_thinkingEnabled.value
+    }
+
+    fun toggleSessionStateEnabled() {
+        viewModelScope.launch {
+            val currentSession = _session.value ?: return@launch
+            val updated = currentSession.copy(sessionStateEnabled = !currentSession.sessionStateEnabled)
+            chatRepository.updateSession(updated)
+            _session.value = updated
+        }
+    }
+
+    fun deleteState(key: String) {
+        viewModelScope.launch {
+            sessionStateRepository.delete(sessionId, key)
+        }
     }
 
     fun updateWorldBook(worldBookId: Long?) {
@@ -420,7 +518,7 @@ class ChatDetailViewModel(
         }
     }
 
-    private suspend fun buildSystemPrompt(session: ChatSession): String {
+    private suspend fun buildSystemPrompt(session: ChatSession, states: List<org.jiangstack.mytavern.domain.model.SessionState> = emptyList()): String {
         val character = session.aiCharacterId?.let {
             characterRepository.getCharacterById(it)
         } ?: return ""
@@ -440,12 +538,14 @@ class ChatDetailViewModel(
                     appendLine("- ${rule.name}: ${rule.description}")
                 }
             }
+            appendSessionStateSection(states, session.sessionStateEnabled)
         }
     }
 
     private suspend fun buildGroupSystemPrompt(
         targetCharacter: Character,
-        allCharacters: List<Character>
+        allCharacters: List<Character>,
+        states: List<org.jiangstack.mytavern.domain.model.SessionState> = emptyList()
     ): String {
         val worldBook = session.value?.worldBookId?.let {
             worldBookRepository.getWorldBookById(it)
@@ -465,6 +565,34 @@ class ChatDetailViewModel(
                 appendLine(worldBook.description)
                 worldBook.rules.forEach { rule ->
                     appendLine("- ${rule.name}: ${rule.description}")
+                }
+            }
+            appendSessionStateSection(states, session.value?.sessionStateEnabled == true)
+        }
+    }
+
+    private fun StringBuilder.appendSessionStateSection(states: List<org.jiangstack.mytavern.domain.model.SessionState>, enabled: Boolean) {
+        if (!enabled) return
+        appendLine()
+        appendLine("【当前会话状态】")
+        if (states.isEmpty()) {
+            appendLine("（暂无记录的状态）")
+        } else {
+            states.forEach { appendLine("- ${it.key}: ${it.value}") }
+        }
+        appendLine()
+        appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
+    }
+
+    private suspend fun handleToolCalls(toolCalls: List<org.jiangstack.mytavern.data.remote.ToolCall>) {
+        toolCalls.forEach { toolCall ->
+            if (toolCall.function.name == "remember_session_state") {
+                try {
+                    val args = kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(toolCall.function.arguments)
+                    val key = args["state_key"] ?: return@forEach
+                    val value = args["state_value"] ?: return@forEach
+                    sessionStateRepository.insertOrUpdate(sessionId, key, value)
+                } catch (_: Exception) {
                 }
             }
         }
@@ -493,6 +621,7 @@ class ChatDetailViewModel(
             sessionCharacterRepository: SessionCharacterRepository,
             llmService: LlmService,
             userPreferencesRepository: UserPreferencesRepository,
+            sessionStateRepository: SessionStateRepository,
             sessionId: Long
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
@@ -505,6 +634,7 @@ class ChatDetailViewModel(
                         sessionCharacterRepository,
                         llmService,
                         userPreferencesRepository,
+                        sessionStateRepository,
                         sessionId
                     ) as T
                 }

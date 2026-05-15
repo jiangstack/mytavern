@@ -9,6 +9,7 @@ import org.jiangstack.mytavern.data.local.dao.LlmConfigDao
 import org.jiangstack.mytavern.data.local.dao.SessionCharacterDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookRuleDao
+import org.jiangstack.mytavern.data.local.dao.SessionStateDao
 import org.jiangstack.mytavern.data.local.entity.CharacterEntity
 import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 import org.jiangstack.mytavern.data.local.entity.ChatSessionEntity
@@ -16,6 +17,7 @@ import org.jiangstack.mytavern.data.local.entity.LlmConfigEntity
 import org.jiangstack.mytavern.data.local.entity.SessionCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
+import org.jiangstack.mytavern.data.local.entity.SessionStateEntity
 
 @Database(
     entities = [
@@ -25,9 +27,10 @@ import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
         ChatSessionEntity::class,
         ChatMessageEntity::class,
         LlmConfigEntity::class,
-        SessionCharacterEntity::class
+        SessionCharacterEntity::class,
+        SessionStateEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +41,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun llmConfigDao(): LlmConfigDao
     abstract fun sessionCharacterDao(): SessionCharacterDao
+    abstract fun sessionStateDao(): SessionStateDao
 }

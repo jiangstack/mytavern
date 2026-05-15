@@ -8,6 +8,7 @@ data class ChatSession(
     val userCharacterId: Long? = null,
     val aiCharacterId: Long? = null,
     val worldBookId: Long? = null,
+    val sessionStateEnabled: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
 

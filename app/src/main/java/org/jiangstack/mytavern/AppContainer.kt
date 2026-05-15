@@ -12,6 +12,7 @@ import org.jiangstack.mytavern.data.local.MIGRATION_1_2
 import org.jiangstack.mytavern.data.local.MIGRATION_2_3
 import org.jiangstack.mytavern.data.local.MIGRATION_3_4
 import org.jiangstack.mytavern.data.local.MIGRATION_4_5
+import org.jiangstack.mytavern.data.local.MIGRATION_5_6
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
@@ -35,7 +36,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -54,6 +55,9 @@ class AppContainer(context: Context) {
 
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())
+
+    val sessionStateRepository: org.jiangstack.mytavern.domain.repository.SessionStateRepository =
+        org.jiangstack.mytavern.data.repository.SessionStateRepositoryImpl(database.sessionStateDao())
 
     val httpLogRepository: HttpLogRepository = HttpLogRepository()
 

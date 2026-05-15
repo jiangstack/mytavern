@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
@@ -89,6 +91,7 @@ fun ChatDetailScreen(
             container.sessionCharacterRepository,
             container.llmService,
             container.userPreferencesRepository,
+            container.sessionStateRepository,
             sessionId
         )
     )
@@ -104,6 +107,8 @@ fun ChatDetailScreen(
     val groupCharacters by viewModel.groupCharacters.collectAsState()
     val activeGeneratingIds by viewModel.activeGeneratingIds.collectAsState()
     val streamingStates by viewModel.streamingStates.collectAsState()
+    val sessionStateEnabled by viewModel.sessionStateEnabled.collectAsState()
+    val sessionStates by viewModel.sessionStates.collectAsState()
 
     val worldBooks by container.worldBookRepository.getAllWorldBooks()
         .collectAsState(initial = emptyList())
@@ -114,6 +119,7 @@ fun ChatDetailScreen(
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
+    var showStateDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -161,6 +167,20 @@ fun ChatDetailScreen(
                             imageVector = if (thinkingEnabled) Icons.Filled.Lightbulb else Icons.Outlined.Lightbulb,
                             contentDescription = if (thinkingEnabled) "思考已开启" else "思考已关闭",
                             tint = if (thinkingEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .combinedClickable(
+                                onClick = { viewModel.toggleSessionStateEnabled() },
+                                onLongClick = { showStateDialog = true }
+                            )
+                            .padding(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (sessionStateEnabled) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                            contentDescription = if (sessionStateEnabled) "状态记录已开启" else "状态记录已关闭",
+                            tint = if (sessionStateEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (worldBooks.isNotEmpty()) {
@@ -341,6 +361,14 @@ fun ChatDetailScreen(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    if (showStateDialog) {
+        SessionStateDialog(
+            states = sessionStates,
+            onDismiss = { showStateDialog = false },
+            onDelete = { key -> viewModel.deleteState(key) }
         )
     }
 }
@@ -782,6 +810,68 @@ private fun EditMessageDialog(
                 Text(stringResource(R.string.confirm))
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun SessionStateDialog(
+    states: List<org.jiangstack.mytavern.domain.model.SessionState>,
+    onDismiss: () -> Unit,
+    onDelete: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("会话状态") },
+        text = {
+            if (states.isEmpty()) {
+                Text(
+                    text = "暂无记录的状态",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Column {
+                    states.forEach { state ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = state.key,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    text = state.value,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            IconButton(
+                                onClick = { onDelete(state.key) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "删除",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))

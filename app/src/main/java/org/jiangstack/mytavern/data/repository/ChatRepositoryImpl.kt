@@ -72,6 +72,7 @@ class ChatRepositoryImpl(
         userCharacterId = userCharacterId,
         aiCharacterId = aiCharacterId,
         worldBookId = worldBookId,
+        sessionStateEnabled = sessionStateEnabled,
         createdAt = createdAt
     )
 
@@ -83,6 +84,7 @@ class ChatRepositoryImpl(
         userCharacterId = userCharacterId,
         aiCharacterId = aiCharacterId,
         worldBookId = worldBookId,
+        sessionStateEnabled = sessionStateEnabled,
         createdAt = createdAt
     )
 

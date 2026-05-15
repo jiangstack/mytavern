@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **架构**：MVVM + Repository 模式
 - **依赖注入**：手动 DI（`AppContainer.kt`）
 - **导航**：Compose Navigation（路由定义见 `ui/navigation/Screen.kt`）
-- **数据持久化**：Room + SQLite（版本 3，schema 导出至 `app/schemas`）
+- **数据持久化**：Room + SQLite（版本 5，schema 导出至 `app/schemas`）
 - **网络请求**：Retrofit + OkHttp + kotlinx.serialization
 - **图片加载**：Coil
 - **异步**：Kotlin Coroutines + Flow
@@ -88,11 +88,33 @@ org.jiangstack.mytavern
 
 支持流式（`Flow<StreamChunk>`）和非流式响应。Retrofit baseUrl 默认为 `https://api.openai.com/`，实际请求 URL 由 `LlmConfig.baseUrl` 动态决定（通过 OkHttp 拦截器替换）。
 
+流式请求通过 OkHttp 直接发起（非 Retrofit），SSE 解析在 `LlmService.sendChatMessageStream` 中逐行处理。请求中设置 `stream_options: { "include_usage": true }` 后，OpenAI 会在最后一个 SSE chunk（`choices: []`）中返回 `usage` 对象（`prompt_tokens`、`completion_tokens`、`total_tokens`）。`StreamChunk` 中通过 `usage` 字段传递该信息，ViewModel 在 collect 结束后将 usage 保存到 `ChatMessage`。
+
+## 聊天消息模型
+
+`ChatMessage` 关键字段：
+- `senderId: Long?` — `null` 表示用户发送的消息，非 `null` 表示 AI 角色 ID
+- `senderName: String?` — AI 角色名称，用户消息时为 `null`
+- `promptTokens / completionTokens / totalTokens: Int?` — LLM 返回的 usage 统计
+
+消息列表通过 `senderId == null` 区分用户消息和 AI 消息，UI 中分别靠右/靠左显示不同颜色的气泡。
+
+## 群聊机制
+
+群聊中用户发送消息后，AI 回复的目标角色选择逻辑（`ChatDetailViewModel.sendMessage`）：
+1. **@提及优先**：解析消息中的 `@角色名`，只让被提及的角色回复
+2. **接话模式**：无 @ 提及时，找到最后一条 AI 消息的发送者，让该角色继续回复
+3. **默认第一个角色**：以上都不满足时，让群聊角色列表中的第一个角色回复
+
+多个目标角色的回复是**并发同时请求**的，每个角色有独立的协程和流式状态（`streamingStates: Map<Long, StreamingState>`），以角色 ID 为 key 管理。双击某条 AI 消息的角色名可触发该角色的下一次回复（调用 `triggerCharacterReply`）。
+
 ## Room 数据库
 
 - **数据库名**：`mytavern.db`
-- **当前版本**：3
-- **迁移**：`Migration_1_2`、`Migration_2_3`（位于 `data/local/`）
+- **当前版本**：5
+- **迁移**：`Migration_1_2`、`Migration_2_3`、`Migration_3_4`、`Migration_4_5`（位于 `data/local/`）
+  - `Migration_3_4`：新增 `session_characters` 关联表（支持群聊多角色）
+  - `Migration_4_5`：为 `chat_messages` 表添加 `promptTokens`、`completionTokens`、`totalTokens` 字段（LLM usage 统计）
 - **schema 导出**：`ksp { arg("room.schemaLocation", "$projectDir/schemas") }`
 
 ## 导出/导入
