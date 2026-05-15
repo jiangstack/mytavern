@@ -47,7 +47,10 @@ class HttpLogInterceptor(
 
         val durationMs = System.currentTimeMillis() - startTime
         val responseHeaders = formatHeaders(response.headers, filterSensitive = false)
-        val responseBody = try {
+        val isEventStream = response.header("Content-Type")?.contains("text/event-stream") == true
+        val responseBody = if (isEventStream) {
+            "[SSE Stream]"
+        } else try {
             response.peekBody(Long.MAX_VALUE).string().truncate()
         } catch (_: Exception) {
             ""

@@ -104,7 +104,7 @@ class ChatDetailViewModel(
             return
         }
 
-        viewModelScope.launch {
+        singleChatJob = viewModelScope.launch {
             _errorMessage.value = null
 
             val currentSession = session.value ?: return@launch
@@ -299,7 +299,7 @@ class ChatDetailViewModel(
 
     fun regenerateMessage(message: ChatMessage) {
         if (message.senderId == null) return
-        viewModelScope.launch {
+        singleChatJob = viewModelScope.launch {
             chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
             val currentSession = session.value ?: return@launch
             val currentMessages = chatRepository.getMessagesBySessionId(sessionId).stateIn(viewModelScope).value
