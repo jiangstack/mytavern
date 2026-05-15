@@ -41,6 +41,12 @@ class SettingsViewModel(
     val userCharacters = characterRepository.getUserCharacters()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val chatHistoryCount: StateFlow<Int> = userPreferencesRepository.chatHistoryCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 12)
+
+    val temperature: StateFlow<Float> = userPreferencesRepository.temperature
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+
     fun setDefaultUserCharacter(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultUserCharacterId(id)
@@ -72,6 +78,18 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             userPreferencesRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setChatHistoryCount(count: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setChatHistoryCount(count.coerceIn(1, 50))
+        }
+    }
+
+    fun setTemperature(temp: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setTemperature(temp.coerceIn(0.0f, 2.0f))
         }
     }
 

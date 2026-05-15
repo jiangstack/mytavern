@@ -1,5 +1,7 @@
 package org.jiangstack.mytavern.ui.chat
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MoreVert
@@ -69,7 +72,7 @@ import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ChatMessage
 import org.jiangstack.mytavern.domain.model.SessionType
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatDetailScreen(
     sessionId: Long,
@@ -83,6 +86,7 @@ fun ChatDetailScreen(
             container.worldBookRepository,
             container.sessionCharacterRepository,
             container.llmService,
+            container.userPreferencesRepository,
             sessionId
         )
     )
@@ -106,6 +110,8 @@ fun ChatDetailScreen(
     var showWorldBookDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -223,6 +229,12 @@ fun ChatDetailScreen(
                                         editingMessage = message
                                         showEditDialog = true
                                     }
+                                } else null,
+                                onDelete = if (!isLoading && activeGeneratingIds.isEmpty()) {
+                                    {
+                                        messageToDelete = message
+                                        showDeleteDialog = true
+                                    }
                                 } else null
                             )
                         }
@@ -296,6 +308,36 @@ fun ChatDetailScreen(
             }
         )
     }
+
+    if (showDeleteDialog && messageToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                messageToDelete = null
+            },
+            title = { Text("删除消息") },
+            text = { Text("确定要删除这条消息吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        messageToDelete?.let { viewModel.deleteMessage(it) }
+                        showDeleteDialog = false
+                        messageToDelete = null
+                    }
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    messageToDelete = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -305,14 +347,20 @@ private fun MessageBubble(
     aiName: String,
     thinkingEnabled: Boolean,
     onRefresh: (() -> Unit)? = null,
-    onEdit: (() -> Unit)? = null
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     val displayContent = remember(message.content) {
         parseThinkContent(message.content)
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onDelete
+            ),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
         Card(
@@ -380,6 +428,19 @@ private fun MessageBubble(
                     Icon(
                         imageVector = Icons.Filled.Edit,
                         contentDescription = "编辑",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (onDelete != null) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "删除",
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

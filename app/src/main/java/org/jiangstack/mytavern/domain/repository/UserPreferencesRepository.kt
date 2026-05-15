@@ -10,4 +10,8 @@ interface UserPreferencesRepository {
     suspend fun setDefaultLlmConfigId(id: Long?)
     val themeMode: Flow<ThemeMode>
     suspend fun setThemeMode(mode: ThemeMode)
+    val chatHistoryCount: Flow<Int>
+    suspend fun setChatHistoryCount(count: Int)
+    val temperature: Flow<Float>
+    suspend fun setTemperature(temp: Float)
 }

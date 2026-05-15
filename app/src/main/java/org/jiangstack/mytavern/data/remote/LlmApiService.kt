@@ -41,6 +41,7 @@ data class ChatCompletionRequest(
     val model: String,
     val messages: List<Message>,
     val stream: Boolean = false,
+    val temperature: Float? = null,
     val reasoning: Reasoning? = null
 )
 
@@ -74,6 +75,7 @@ data class AnthropicRequest(
     val model: String,
     val messages: List<AnthropicMessage>,
     val max_tokens: Int = 2048,
+    val temperature: Float? = null,
     val system: String? = null
 )
 

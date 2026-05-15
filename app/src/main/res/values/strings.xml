@@ -55,6 +55,11 @@
     <string name="worldbook_rule_delete_title">删除规则</string>
     <string name="worldbook_rule_delete_message">确定要删除规则「%1$s」吗？</string>
 
+    <!-- Chat Settings -->
+    <string name="settings_section_chat">聊天</string>
+    <string name="settings_chat_history_count">历史消息数量</string>
+    <string name="settings_temperature">温度</string>
+
     <!-- LLM Config -->
     <string name="llm_config_create_title">创建 LLM 配置</string>
     <string name="llm_config_edit_title">编辑 LLM 配置</string>

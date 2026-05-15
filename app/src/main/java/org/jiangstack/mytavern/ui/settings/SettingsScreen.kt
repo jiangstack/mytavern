@@ -72,6 +72,8 @@ fun SettingsScreen(
     val configs by viewModel.configs.collectAsState()
     val defaultLlmConfigId by viewModel.defaultLlmConfigId.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val chatHistoryCount by viewModel.chatHistoryCount.collectAsState()
+    val temperature by viewModel.temperature.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
     var showLlmEditDialog by remember { mutableStateOf(false) }
@@ -218,6 +220,66 @@ fun SettingsScreen(
                             viewModel.setDefaultLlmConfig(config.id)
                         }
                     )
+                }
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.settings_section_chat),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_chat_history_count),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "$chatHistoryCount 条",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Slider(
+                            value = chatHistoryCount.toFloat(),
+                            onValueChange = { viewModel.setChatHistoryCount(it.toInt()) },
+                            valueRange = 1f..50f,
+                            steps = 48
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.settings_temperature),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "%.1f".format(temperature),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Slider(
+                            value = temperature,
+                            onValueChange = { viewModel.setTemperature(it) },
+                            valueRange = 0.0f..2.0f,
+                            steps = 19
+                        )
+                    }
                 }
             }
 

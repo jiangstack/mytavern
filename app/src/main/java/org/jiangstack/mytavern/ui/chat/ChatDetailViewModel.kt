@@ -24,6 +24,7 @@ import org.jiangstack.mytavern.domain.model.WorldBook
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
+import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
 
@@ -34,6 +35,7 @@ class ChatDetailViewModel(
     private val worldBookRepository: WorldBookRepository,
     private val sessionCharacterRepository: SessionCharacterRepository,
     private val llmService: LlmService,
+    private val userPreferencesRepository: UserPreferencesRepository,
     private val sessionId: Long
 ) : ViewModel() {
 
@@ -62,6 +64,12 @@ class ChatDetailViewModel(
             flowOf(emptyList())
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val historyCount: StateFlow<Int> = userPreferencesRepository.chatHistoryCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 12)
+
+    val temperature: StateFlow<Float> = userPreferencesRepository.temperature
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
 
     init {
         viewModelScope.launch {
@@ -154,10 +162,12 @@ class ChatDetailViewModel(
             val fullContent = StringBuilder()
             val fullReasoning = StringBuilder()
             val enableThinking = _thinkingEnabled.value
+            val messagesToSend = currentMessages.takeLast(historyCount.value)
             llmService.sendChatMessageStream(
-                messages = currentMessages,
+                messages = messagesToSend,
                 systemPrompt = systemPrompt,
-                thinkingEnabled = enableThinking
+                thinkingEnabled = enableThinking,
+                temperature = temperature.value
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
@@ -215,7 +225,8 @@ class ChatDetailViewModel(
             senderId = null,
             content = "请输出${targetCharacter.name}的回复"
         )
-        val allMessages = currentMessages + instructionMessage
+        val historyMessages = currentMessages.takeLast(historyCount.value)
+        val allMessages = historyMessages + instructionMessage
 
         try {
             val fullContent = StringBuilder()
@@ -226,7 +237,8 @@ class ChatDetailViewModel(
                 messages = allMessages,
                 systemPrompt = systemPrompt,
                 thinkingEnabled = enableThinking,
-                isGroupChat = true
+                isGroupChat = true,
+                temperature = temperature.value
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
@@ -303,6 +315,7 @@ class ChatDetailViewModel(
             chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
             val currentSession = session.value ?: return@launch
             val currentMessages = chatRepository.getMessagesBySessionId(sessionId).stateIn(viewModelScope).value
+            val messagesToSend = currentMessages.takeLast(historyCount.value)
 
             if (currentSession.type == SessionType.SINGLE) {
                 val systemPrompt = buildSystemPrompt(currentSession)
@@ -315,9 +328,10 @@ class ChatDetailViewModel(
                     val fullReasoning = StringBuilder()
                     val enableThinking = _thinkingEnabled.value
                     llmService.sendChatMessageStream(
-                        messages = currentMessages,
+                        messages = messagesToSend,
                         systemPrompt = systemPrompt,
-                        thinkingEnabled = enableThinking
+                        thinkingEnabled = enableThinking,
+                        temperature = temperature.value
                     ).collect { chunk ->
                         if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                             fullReasoning.append(chunk.reasoningContent)
@@ -372,6 +386,12 @@ class ChatDetailViewModel(
             chatRepository.updateMessage(message.copy(content = newContent))
             chatRepository.deleteMessagesAfter(message.sessionId, message.timestamp)
             sendMessage(newContent)
+        }
+    }
+
+    fun deleteMessage(message: ChatMessage) {
+        viewModelScope.launch {
+            chatRepository.deleteMessage(message)
         }
     }
 
@@ -447,6 +467,7 @@ class ChatDetailViewModel(
             worldBookRepository: WorldBookRepository,
             sessionCharacterRepository: SessionCharacterRepository,
             llmService: LlmService,
+            userPreferencesRepository: UserPreferencesRepository,
             sessionId: Long
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
@@ -458,6 +479,7 @@ class ChatDetailViewModel(
                         worldBookRepository,
                         sessionCharacterRepository,
                         llmService,
+                        userPreferencesRepository,
                         sessionId
                     ) as T
                 }

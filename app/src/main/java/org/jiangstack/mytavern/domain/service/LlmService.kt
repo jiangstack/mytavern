@@ -38,7 +38,8 @@ class LlmService(
         systemPrompt: String,
         config: LlmConfig? = null,
         thinkingEnabled: Boolean = true,
-        isGroupChat: Boolean = false
+        isGroupChat: Boolean = false,
+        temperature: Float? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val activeConfig = config ?: getDefaultConfig()
@@ -58,6 +59,7 @@ class LlmService(
                     val request = ChatCompletionRequest(
                         model = activeConfig.model,
                         messages = requestMessages,
+                        temperature = temperature,
                         reasoning = if (thinkingEnabled) null else Reasoning(effort = "none")
                     )
                     Log.d("LlmService", "非流式发送给 LLM 的请求: ${json.encodeToString(ChatCompletionRequest.serializer(), request)}")
@@ -80,6 +82,7 @@ class LlmService(
                     val request = AnthropicRequest(
                         model = activeConfig.model,
                         messages = anthropicMessages,
+                        temperature = temperature,
                         system = systemPrompt
                     )
                     Log.d("LlmService", "Anthropic 发送给 LLM 的请求: ${json.encodeToString(AnthropicRequest.serializer(), request)}")
@@ -104,7 +107,8 @@ class LlmService(
         systemPrompt: String,
         config: LlmConfig? = null,
         thinkingEnabled: Boolean = true,
-        isGroupChat: Boolean = false
+        isGroupChat: Boolean = false,
+        temperature: Float? = null
     ): Flow<StreamChunk> = flow {
         val activeConfig = config ?: getDefaultConfig()
             ?: throw IllegalStateException("没有可用的 LLM 配置")
@@ -124,6 +128,7 @@ class LlmService(
                     model = activeConfig.model,
                     messages = requestMessages,
                     stream = true,
+                    temperature = temperature,
                     reasoning = if (thinkingEnabled) null else Reasoning(effort = "none")
                 )
                 val requestBodyString = json.encodeToString(
