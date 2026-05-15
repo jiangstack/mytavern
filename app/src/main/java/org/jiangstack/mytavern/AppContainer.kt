@@ -10,15 +10,18 @@ import org.jiangstack.mytavern.data.repository.HttpLogRepository
 import org.jiangstack.mytavern.data.local.AppDatabase
 import org.jiangstack.mytavern.data.local.MIGRATION_1_2
 import org.jiangstack.mytavern.data.local.MIGRATION_2_3
+import org.jiangstack.mytavern.data.local.MIGRATION_3_4
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
 import org.jiangstack.mytavern.data.repository.LlmConfigRepositoryImpl
+import org.jiangstack.mytavern.data.repository.SessionCharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.UserPreferencesRepositoryImpl
 import org.jiangstack.mytavern.data.repository.WorldBookRepositoryImpl
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
+import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
@@ -31,7 +34,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -44,6 +47,9 @@ class AppContainer(context: Context) {
 
     val chatRepository: ChatRepository =
         ChatRepositoryImpl(database.chatSessionDao(), database.chatMessageDao())
+
+    val sessionCharacterRepository: SessionCharacterRepository =
+        SessionCharacterRepositoryImpl(database.sessionCharacterDao())
 
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())

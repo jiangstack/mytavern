@@ -61,7 +61,8 @@ fun ChatListScreen(
             container.chatRepository,
             container.characterRepository,
             container.worldBookRepository,
-            container.userPreferencesRepository
+            container.userPreferencesRepository,
+            container.sessionCharacterRepository
         )
     )
 
@@ -127,9 +128,13 @@ fun ChatListScreen(
             aiCharacters = aiCharacters,
             worldBooks = worldBooks,
             onDismiss = { showCreateDialog = false },
-            onConfirm = { aiCharacterId, title, worldBookId ->
+            onConfirm = { selectedIds, title, worldBookId ->
                 scope.launch {
-                    val sessionId = viewModel.createSession(aiCharacterId, title, worldBookId)
+                    val sessionId = if (selectedIds.size == 1) {
+                        viewModel.createSession(selectedIds.first(), title, worldBookId)
+                    } else {
+                        viewModel.createGroupSession(selectedIds, title, worldBookId)
+                    }
                     showCreateDialog = false
                     onNavigateToChat(sessionId)
                 }
@@ -219,9 +224,10 @@ private fun CreateChatDialog(
     aiCharacters: List<Character>,
     worldBooks: List<WorldBook>,
     onDismiss: () -> Unit,
-    onConfirm: (aiCharacterId: Long, title: String, worldBookId: Long?) -> Unit
+    onConfirm: (aiCharacterIds: List<Long>, title: String, worldBookId: Long?) -> Unit
 ) {
-    var selectedCharacterId by remember { mutableStateOf<Long?>(null) }
+    var isGroupChat by remember { mutableStateOf(false) }
+    var selectedCharacterIds by remember { mutableStateOf(setOf<Long>()) }
     var selectedWorldBookId by remember { mutableStateOf<Long?>(null) }
     var title by remember { mutableStateOf("") }
 
@@ -230,12 +236,45 @@ private fun CreateChatDialog(
         title = { Text(stringResource(R.string.chat_create_title)) },
         text = {
             Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(
+                        onClick = {
+                            isGroupChat = false
+                            selectedCharacterIds = emptySet()
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_mode_single),
+                            color = if (!isGroupChat) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            isGroupChat = true
+                            selectedCharacterIds = emptySet()
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_mode_group),
+                            color = if (isGroupChat) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = stringResource(R.string.chat_select_ai_character),
+                    text = if (isGroupChat) stringResource(R.string.chat_select_ai_characters)
+                    else stringResource(R.string.chat_select_ai_character),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
                 if (aiCharacters.isEmpty()) {
                     Text(
                         text = "暂无 AI 角色，请先创建一个",
@@ -248,10 +287,23 @@ private fun CreateChatDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = 4.dp)
                         ) {
-                            RadioButton(
-                                selected = selectedCharacterId == character.id,
-                                onClick = { selectedCharacterId = character.id }
-                            )
+                            if (isGroupChat) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = character.id in selectedCharacterIds,
+                                    onCheckedChange = { checked ->
+                                        selectedCharacterIds = if (checked) {
+                                            selectedCharacterIds + character.id
+                                        } else {
+                                            selectedCharacterIds - character.id
+                                        }
+                                    }
+                                )
+                            } else {
+                                RadioButton(
+                                    selected = selectedCharacterIds.contains(character.id),
+                                    onClick = { selectedCharacterIds = setOf(character.id) }
+                                )
+                            }
                             Text(
                                 text = character.name,
                                 modifier = Modifier.padding(start = 8.dp)
@@ -259,6 +311,7 @@ private fun CreateChatDialog(
                         }
                     }
                 }
+
                 if (worldBooks.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -296,6 +349,7 @@ private fun CreateChatDialog(
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.OutlinedTextField(
                     value = title,
@@ -309,11 +363,15 @@ private fun CreateChatDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    selectedCharacterId?.let {
-                        onConfirm(it, title.ifBlank { "新聊天" }, selectedWorldBookId)
+                    if (selectedCharacterIds.isNotEmpty()) {
+                        onConfirm(
+                            selectedCharacterIds.toList(),
+                            title.ifBlank { if (isGroupChat) "新群聊" else "新聊天" },
+                            selectedWorldBookId
+                        )
                     }
                 },
-                enabled = selectedCharacterId != null
+                enabled = selectedCharacterIds.isNotEmpty()
             ) {
                 Text(stringResource(R.string.confirm))
             }

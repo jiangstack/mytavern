@@ -12,6 +12,7 @@ import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.SessionType
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
+import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 
@@ -19,7 +20,8 @@ class ChatListViewModel(
     private val chatRepository: ChatRepository,
     private val characterRepository: CharacterRepository,
     private val worldBookRepository: WorldBookRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val sessionCharacterRepository: SessionCharacterRepository
 ) : ViewModel() {
 
     val sessions: StateFlow<List<ChatSession>> = chatRepository.getAllSessions()
@@ -46,6 +48,27 @@ class ChatListViewModel(
         return chatRepository.insertSession(session)
     }
 
+    suspend fun createGroupSession(
+        aiCharacterIds: List<Long>,
+        title: String,
+        worldBookId: Long? = null
+    ): Long {
+        val userCharacterId = userPreferencesRepository.defaultUserCharacterId
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+            .value
+
+        val session = ChatSession(
+            type = SessionType.GROUP,
+            title = title,
+            aiCharacterId = null,
+            userCharacterId = userCharacterId,
+            worldBookId = worldBookId
+        )
+        val sessionId = chatRepository.insertSession(session)
+        sessionCharacterRepository.addCharactersToSession(sessionId, aiCharacterIds)
+        return sessionId
+    }
+
     fun deleteSession(session: ChatSession) {
         viewModelScope.launch {
             chatRepository.deleteMessagesBySessionId(session.id)
@@ -58,7 +81,8 @@ class ChatListViewModel(
             chatRepository: ChatRepository,
             characterRepository: CharacterRepository,
             worldBookRepository: WorldBookRepository,
-            userPreferencesRepository: UserPreferencesRepository
+            userPreferencesRepository: UserPreferencesRepository,
+            sessionCharacterRepository: SessionCharacterRepository
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -67,7 +91,8 @@ class ChatListViewModel(
                         chatRepository,
                         characterRepository,
                         worldBookRepository,
-                        userPreferencesRepository
+                        userPreferencesRepository,
+                        sessionCharacterRepository
                     ) as T
                 }
             }

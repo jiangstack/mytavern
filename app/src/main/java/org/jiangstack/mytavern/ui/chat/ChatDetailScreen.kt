@@ -34,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.DropdownMenu
@@ -64,7 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
+import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ChatMessage
+import org.jiangstack.mytavern.domain.model.SessionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +81,7 @@ fun ChatDetailScreen(
             container.chatRepository,
             container.characterRepository,
             container.worldBookRepository,
+            container.sessionCharacterRepository,
             container.llmService,
             sessionId
         )
@@ -91,6 +95,9 @@ fun ChatDetailScreen(
     val streamingContent by viewModel.streamingContent.collectAsState()
     val streamingReasoning by viewModel.streamingReasoning.collectAsState()
     val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
+    val groupCharacters by viewModel.groupCharacters.collectAsState()
+    val activeGeneratingIds by viewModel.activeGeneratingIds.collectAsState()
+    val streamingStates by viewModel.streamingStates.collectAsState()
 
     val worldBooks by container.worldBookRepository.getAllWorldBooks()
         .collectAsState(initial = emptyList())
@@ -103,8 +110,13 @@ fun ChatDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
-    val hasStreaming = streamingContent.isNotEmpty() || streamingReasoning.isNotEmpty() || isLoading
-    val itemCount = messages.size + if (hasStreaming) 1 else 0
+    val isSingleChatStreaming = session?.type != SessionType.GROUP &&
+        (streamingContent.isNotEmpty() || streamingReasoning.isNotEmpty() || isLoading)
+    val isGroupChatStreaming = session?.type == SessionType.GROUP && activeGeneratingIds.isNotEmpty()
+    val hasStreaming = isSingleChatStreaming || isGroupChatStreaming
+    val itemCount = messages.size +
+        (if (isSingleChatStreaming) 1 else 0) +
+        (if (isGroupChatStreaming) activeGeneratingIds.size else 0)
 
     LaunchedEffect(itemCount) {
         if (itemCount > 0) {
@@ -201,12 +213,12 @@ fun ChatDetailScreen(
                             MessageBubble(
                                 message = message,
                                 isUser = message.senderId == null,
-                                aiName = aiCharacter?.name ?: "AI",
+                                aiName = if (message.senderId == null) "" else (message.senderName ?: aiCharacter?.name ?: "AI"),
                                 thinkingEnabled = thinkingEnabled,
-                                onRefresh = if (!isLoading) {
+                                onRefresh = if (!isLoading && activeGeneratingIds.isEmpty()) {
                                     { viewModel.regenerateMessage(message) }
                                 } else null,
-                                onEdit = if (!isLoading) {
+                                onEdit = if (!isLoading && activeGeneratingIds.isEmpty()) {
                                     {
                                         editingMessage = message
                                         showEditDialog = true
@@ -214,7 +226,7 @@ fun ChatDetailScreen(
                                 } else null
                             )
                         }
-                        if (hasStreaming) {
+                        if (isSingleChatStreaming) {
                             item {
                                 StreamingMessageBubble(
                                     content = streamingContent,
@@ -225,6 +237,21 @@ fun ChatDetailScreen(
                                 )
                             }
                         }
+                        if (isGroupChatStreaming) {
+                            activeGeneratingIds.forEach { charId ->
+                                val charName = groupCharacters.find { it.id == charId }?.name ?: "AI"
+                                val state = streamingStates[charId]
+                                item(key = "streaming_$charId") {
+                                    StreamingMessageBubble(
+                                        content = state?.content ?: "",
+                                        reasoning = state?.reasoning ?: "",
+                                        isLoading = state?.content.isNullOrEmpty() && state?.reasoning.isNullOrEmpty(),
+                                        aiName = charName,
+                                        thinkingEnabled = thinkingEnabled
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -233,10 +260,12 @@ fun ChatDetailScreen(
                 onSend = { content ->
                     viewModel.sendMessage(content)
                 },
-                isLoading = isLoading,
+                isLoading = isLoading || activeGeneratingIds.isNotEmpty(),
                 onCancel = {
-                    viewModel.cancelCurrentRequest()
-                }
+                    viewModel.cancelCurrentRequests()
+                },
+                groupCharacters = groupCharacters,
+                isGroupChat = session?.type == SessionType.GROUP
             )
         }
     }
@@ -465,9 +494,12 @@ private fun parseThinkContent(raw: String): ParsedContent {
 private fun ChatInputBar(
     onSend: (String) -> Unit,
     isLoading: Boolean,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    groupCharacters: List<Character> = emptyList(),
+    isGroupChat: Boolean = false
 ) {
     var text by remember { mutableStateOf("") }
+    var showMentionPicker by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Row(
@@ -476,6 +508,20 @@ private fun ChatInputBar(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isGroupChat && groupCharacters.isNotEmpty()) {
+            IconButton(
+                onClick = { showMentionPicker = true },
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = "@",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (!isLoading) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+        }
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
@@ -512,6 +558,17 @@ private fun ChatInputBar(
                 contentDescription = if (isLoading) "取消" else stringResource(R.string.chat_send)
             )
         }
+    }
+
+    if (showMentionPicker) {
+        MentionPickerDialog(
+            characters = groupCharacters,
+            onSelect = { charName ->
+                text = "$text@$charName "
+                showMentionPicker = false
+            },
+            onDismiss = { showMentionPicker = false }
+        )
     }
 }
 
@@ -566,6 +623,44 @@ private fun SelectWorldBookDialog(
                 Text(stringResource(R.string.confirm))
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun MentionPickerDialog(
+    characters: List<Character>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.chat_mention_title)) },
+        text = {
+            Column {
+                if (characters.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.chat_mention_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    characters.forEach { character ->
+                        TextButton(
+                            onClick = { onSelect(character.name) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(character.name)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
