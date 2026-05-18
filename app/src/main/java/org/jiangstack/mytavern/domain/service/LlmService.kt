@@ -65,7 +65,8 @@ class LlmService(
         thinkingEnabled: Boolean = true,
         isGroupChat: Boolean = false,
         temperature: Float? = null,
-        tools: List<Tool>? = null
+        tools: List<Tool>? = null,
+        userName: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val activeConfig = config ?: getDefaultConfig()
@@ -78,7 +79,7 @@ class LlmService(
                         messages.map {
                             Message(
                                 role = if (it.senderId == null) "user" else "assistant",
-                                content = formatMessageContent(it, isGroupChat)
+                                content = formatMessageContent(it, userName)
                             )
                         }
                     )
@@ -104,7 +105,7 @@ class LlmService(
                     val anthropicMessages = messages.map {
                         AnthropicMessage(
                             role = if (it.senderId == null) "user" else "assistant",
-                            content = formatMessageContent(it, isGroupChat)
+                            content = formatMessageContent(it, userName)
                         )
                     }
                     val request = AnthropicRequest(
@@ -137,7 +138,8 @@ class LlmService(
         thinkingEnabled: Boolean = true,
         isGroupChat: Boolean = false,
         temperature: Float? = null,
-        tools: List<Tool>? = null
+        tools: List<Tool>? = null,
+        userName: String? = null
     ): Flow<StreamChunk> = flow {
         val activeConfig = config ?: getDefaultConfig()
             ?: throw IllegalStateException("没有可用的 LLM 配置")
@@ -149,7 +151,7 @@ class LlmService(
                     messages.map {
                         Message(
                             role = if (it.senderId == null) "user" else "assistant",
-                            content = formatMessageContent(it, isGroupChat)
+                            content = formatMessageContent(it, userName)
                         )
                     }
                 )
@@ -263,11 +265,13 @@ class LlmService(
         val arguments: StringBuilder = StringBuilder()
     )
 
-    private fun formatMessageContent(message: ChatMessage, isGroupChat: Boolean): String {
-        if (!isGroupChat) return message.content
+    private fun formatMessageContent(message: ChatMessage, userName: String? = null): String {
         val prefix = when {
-            message.senderId == null -> "用户"
+            message.senderId == null -> userName ?: "用户"
             else -> message.senderName ?: "AI"
+        }
+        if (message.content.startsWith(prefix)) {
+            return message.content
         }
         return "$prefix：${message.content}"
     }

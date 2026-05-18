@@ -199,7 +199,8 @@ class ChatDetailViewModel(
                 systemPrompt = systemPrompt,
                 thinkingEnabled = enableThinking,
                 temperature = temperature.value,
-                tools = tools
+                tools = tools,
+                userName = userCharacter.value?.name
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
@@ -229,7 +230,8 @@ class ChatDetailViewModel(
                     systemPrompt = systemPrompt,
                     thinkingEnabled = enableThinking,
                     temperature = temperature.value,
-                    tools = null
+                    tools = null,
+                    userName = userCharacter.value?.name
                 ).collect { chunk ->
                     if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                         fullReasoning.append(chunk.reasoningContent)
@@ -319,7 +321,8 @@ class ChatDetailViewModel(
                 thinkingEnabled = enableThinking,
                 isGroupChat = true,
                 temperature = temperature.value,
-                tools = tools
+                tools = tools,
+                userName = userCharacter.value?.name
             ).collect { chunk ->
                 if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                     fullReasoning.append(chunk.reasoningContent)
@@ -350,7 +353,8 @@ class ChatDetailViewModel(
                     thinkingEnabled = enableThinking,
                     isGroupChat = true,
                     temperature = temperature.value,
-                    tools = null
+                    tools = null,
+                    userName = userCharacter.value?.name
                 ).collect { chunk ->
                     if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                         fullReasoning.append(chunk.reasoningContent)
@@ -480,7 +484,8 @@ class ChatDetailViewModel(
                         messages = messagesToSend,
                         systemPrompt = systemPrompt,
                         thinkingEnabled = enableThinking,
-                        temperature = temperature.value
+                        temperature = temperature.value,
+                        userName = userCharacter.value?.name
                     ).collect { chunk ->
                         if (enableThinking && chunk.reasoningContent.isNotBlank()) {
                             fullReasoning.append(chunk.reasoningContent)
@@ -553,19 +558,26 @@ class ChatDetailViewModel(
             worldBookRepository.getWorldBookById(it)
         }
 
+        val userChar = userCharacter.value
+
         return buildString {
             appendLine("你是 ${character.name}。")
-            appendLine("角色描述：${character.description}")
+            appendLine("描述：${character.description}")
             if (worldBook != null) {
                 appendLine()
-                appendLine("【世界书：${worldBook.name}】")
+                appendLine("世界书：${worldBook.name}")
                 appendLine(worldBook.description)
                 worldBook.rules.forEach { rule ->
                     appendLine("- ${rule.name}: ${rule.description}")
                 }
             }
+            if (userChar != null) {
+                appendLine()
+                appendLine("用户角色：\n")
+                appendLine("${userChar.name}:${userChar.description}")
+            }
             appendLine()
-            appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
+            appendLine("使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
         }
     }
 
@@ -577,21 +589,28 @@ class ChatDetailViewModel(
             worldBookRepository.getWorldBookById(it)
         }
 
+        val userChar = userCharacter.value
+
         return buildString {
             appendLine("你是 ${targetCharacter.name}。")
             appendLine("角色描述：${targetCharacter.description}")
             appendLine()
-            appendLine("当前群聊中的其他成员：")
+            appendLine("当前会话中的其他成员：")
             allCharacters
                 .filter { it.id != targetCharacter.id }
                 .forEach { appendLine("- ${it.name}：${it.description}") }
             if (worldBook != null) {
                 appendLine()
-                appendLine("【世界书：${worldBook.name}】")
+                appendLine("设定-${worldBook.name}")
                 appendLine(worldBook.description)
                 worldBook.rules.forEach { rule ->
                     appendLine("- ${rule.name}: ${rule.description}")
                 }
+            }
+            if (userChar != null) {
+                appendLine()
+                appendLine("用户角色：\n")
+                appendLine("${userChar.name}:${userChar.description}")
             }
             appendLine()
             appendLine("你可以使用 remember_session_state 工具来记录或更新角色状态。当角色的状态发生变化时（如心情改变、移动位置、关系进展等），调用此工具记录新的状态。")
