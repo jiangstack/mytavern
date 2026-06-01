@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -80,18 +82,31 @@ fun NovelChapterEditScreen(
     val isAiGenerating by viewModel.isAiGenerating.collectAsState()
     val outlineSummary by viewModel.outlineSummary.collectAsState()
     val isSummarizingOutline by viewModel.isSummarizingOutline.collectAsState()
+    val aiModifyContent by viewModel.aiModifyContent.collectAsState()
+    val isAiModifying by viewModel.isAiModifying.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var outlineExpanded by remember { mutableStateOf(false) }
     var outlineText by remember { mutableStateOf("") }
     var showAiDialog by remember { mutableStateOf(false) }
     var customRequest by remember { mutableStateOf("") }
+    var showAiModifyDialog by remember { mutableStateOf(false) }
+    var modifyRequest by remember { mutableStateOf("") }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 同步纲要文本
     LaunchedEffect(chapter) {
         chapter?.let { outlineText = it.outline }
+    }
+
+    // 同步 TextFieldValue 与 editContent
+    LaunchedEffect(editContent) {
+        if (editContent != textFieldValue.text) {
+            val cursorPos = editContent.length
+            textFieldValue = TextFieldValue(text = editContent, selection = androidx.compose.ui.text.TextRange(cursorPos))
+        }
     }
 
     // 错误提示
@@ -121,8 +136,26 @@ fun NovelChapterEditScreen(
                 },
                 actions = {
                     TextButton(
+                        onClick = {
+                            val selection = textFieldValue.selection
+                            viewModel.setAiModifyTargetRange(
+                                if (!selection.collapsed) selection.min..selection.max else null
+                            )
+                            showAiModifyDialog = true
+                        },
+                        enabled = !isAiModifying && !isAiGenerating
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.height(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.novel_ai_modify))
+                    }
+                    TextButton(
                         onClick = { showAiDialog = true },
-                        enabled = !isAiGenerating
+                        enabled = !isAiGenerating && !isAiModifying
                     ) {
                         Icon(
                             Icons.Default.AutoAwesome,
@@ -291,8 +324,54 @@ fun NovelChapterEditScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
+            // AI 修改内容预览
+            if (aiModifyContent.isNotBlank()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f),
+                            MaterialTheme.shapes.medium
+                        )
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.novel_ai_modify),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = aiModifyContent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .verticalScroll(rememberScrollState())
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row {
+                        Button(
+                            onClick = { viewModel.acceptAiModify() },
+                            enabled = !isAiModifying
+                        ) {
+                            Text(stringResource(R.string.novel_ai_accept))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.discardAiModify() },
+                            enabled = !isAiModifying
+                        ) {
+                            Text(stringResource(R.string.novel_ai_discard))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // AI 生成中指示器
-            if (isAiGenerating && aiStreamingContent.isBlank()) {
+            if ((isAiGenerating || isAiModifying) && aiStreamingContent.isBlank() && aiModifyContent.isBlank()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -312,8 +391,11 @@ fun NovelChapterEditScreen(
 
             // 正文编辑区
             BasicTextField(
-                value = editContent,
-                onValueChange = { viewModel.updateContent(it) },
+                value = textFieldValue,
+                onValueChange = { newValue ->
+                    textFieldValue = newValue
+                    viewModel.updateContent(newValue.text)
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
@@ -354,6 +436,29 @@ fun NovelChapterEditScreen(
             }
         )
     }
+
+    // AI 修改对话框
+    if (showAiModifyDialog) {
+        val selection = textFieldValue.selection
+        val selectedText = if (!selection.collapsed) {
+            editContent.substring(selection.min, selection.max)
+        } else {
+            ""
+        }
+        AiModifyDialog(
+            selectedText = selectedText,
+            allContentLength = editContent.length,
+            modifyRequest = modifyRequest,
+            onModifyRequestChange = { modifyRequest = it },
+            onDismiss = { showAiModifyDialog = false },
+            onConfirm = {
+                showAiModifyDialog = false
+                val textToModify = if (selectedText.isNotBlank()) selectedText else editContent
+                viewModel.startAiModify(textToModify, modifyRequest)
+                modifyRequest = ""
+            }
+        )
+    }
 }
 
 @Composable
@@ -385,6 +490,74 @@ private fun AiContinueDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun AiModifyDialog(
+    selectedText: String,
+    allContentLength: Int,
+    modifyRequest: String,
+    onModifyRequestChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val hasSelection = selectedText.isNotBlank()
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.novel_ai_modify)) },
+        text = {
+            Column {
+                Text(
+                    text = if (hasSelection) {
+                        stringResource(R.string.novel_ai_modify_selected, selectedText.length)
+                    } else {
+                        stringResource(R.string.novel_ai_modify_all, allContentLength)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (hasSelection) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = selectedText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                MaterialTheme.shapes.small
+                            )
+                            .padding(8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = modifyRequest,
+                    onValueChange = onModifyRequestChange,
+                    label = { Text(stringResource(R.string.novel_ai_modify_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = modifyRequest.isNotBlank()
+            ) {
                 Text(stringResource(R.string.confirm))
             }
         },

@@ -62,6 +62,16 @@ class NovelChapterEditViewModel(
     private val _isSummarizingOutline = MutableStateFlow(false)
     val isSummarizingOutline: StateFlow<Boolean> = _isSummarizingOutline
 
+    // AI 修改状态
+    private val _aiModifyContent = MutableStateFlow("")
+    val aiModifyContent: StateFlow<String> = _aiModifyContent
+
+    private val _isAiModifying = MutableStateFlow(false)
+    val isAiModifying: StateFlow<Boolean> = _isAiModifying
+
+    // 记录 AI 修改时的选区范围，用于采纳时替换
+    private var aiModifyTargetRange: IntRange? = null
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
@@ -262,6 +272,76 @@ class NovelChapterEditViewModel(
         _outlineSummary.value = ""
     }
 
+    fun startAiModify(selectedText: String, customRequest: String) {
+        if (_isAiModifying.value) return
+        aiJob?.cancel()
+        aiJob = viewModelScope.launch {
+            _isAiModifying.value = true
+            _aiModifyContent.value = ""
+            _errorMessage.value = null
+
+            try {
+                val systemPrompt = buildNovelModifyPrompt(selectedText, customRequest)
+                val temperature = userPreferencesRepository.temperature.first()
+                val maxTokens = userPreferencesRepository.maxTokens.first()
+
+                val promptMessage = org.jiangstack.mytavern.domain.model.ChatMessage(
+                    sessionId = 0,
+                    content = "请按照要求修改上述文本。直接输出修改后的内容。",
+                    role = "user"
+                )
+
+                val fullContent = StringBuilder()
+
+                llmService.sendChatMessageStream(
+                    messages = listOf(promptMessage),
+                    systemPrompt = systemPrompt,
+                    temperature = temperature,
+                    maxTokens = maxTokens,
+                    thinkingEnabled = false
+                ).collect { chunk ->
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        _aiModifyContent.value = fullContent.toString()
+                    }
+                }
+            } catch (e: CancellationException) {
+                // 用户取消
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "AI 修改失败"
+            } finally {
+                _isAiModifying.value = false
+            }
+        }
+    }
+
+    fun setAiModifyTargetRange(range: IntRange?) {
+        aiModifyTargetRange = range
+    }
+
+    fun acceptAiModify() {
+        val modifyResult = _aiModifyContent.value
+        if (modifyResult.isBlank()) return
+
+        val currentContent = _editContent.value
+        val range = aiModifyTargetRange
+
+        _editContent.value = if (range != null && range.first < currentContent.length) {
+            val end = minOf(range.last, currentContent.length - 1)
+            currentContent.replaceRange(range.first, end + 1, modifyResult)
+        } else {
+            modifyResult
+        }
+        _aiModifyContent.value = ""
+        aiModifyTargetRange = null
+        saveChapter()
+    }
+
+    fun discardAiModify() {
+        _aiModifyContent.value = ""
+        aiModifyTargetRange = null
+    }
+
     fun clearError() {
         _errorMessage.value = null
     }
@@ -335,6 +415,66 @@ class NovelChapterEditViewModel(
 
             appendLine()
             appendLine("请续写小说正文，保持风格一致，承接前文情节。直接输出续写内容，不要重复前文，不要加任何解释或标题。")
+        }
+    }
+
+    private suspend fun buildNovelModifyPrompt(selectedText: String, customRequest: String): String {
+        val novel = _novel.value ?: return ""
+        val wb = _worldBook.value
+        val chars = _characters.value
+        val allChapters = _allChapters.value
+        val currentChapter = _chapter.value
+
+        return buildString {
+            appendLine("你是一位小说编辑助手，请根据用户的修改要求对指定文本进行修改。")
+            appendLine()
+            appendLine("小说名称：${novel.title}")
+            if (novel.description.isNotBlank()) {
+                appendLine("小说设定：${novel.description}")
+            }
+
+            if (wb != null) {
+                appendLine()
+                appendLine("世界书：${wb.name}")
+                appendLine(wb.description)
+                wb.rules.forEach { rule ->
+                    appendLine("- ${rule.name}: ${rule.description}")
+                }
+            }
+
+            if (chars.isNotEmpty()) {
+                appendLine()
+                appendLine("参与角色：")
+                chars.forEach { char ->
+                    appendLine("- ${char.name}: ${char.description}")
+                }
+            }
+
+            if (allChapters.isNotEmpty()) {
+                appendLine()
+                appendLine("章节纲要：")
+                allChapters.forEach { ch ->
+                    val marker = if (ch.id == chapterId) "（当前章节）" else ""
+                    appendLine("第${ch.chapterNumber}章 ${ch.title}$marker: ${ch.outline.ifBlank { "（无纲要）" }}")
+                }
+            }
+
+            if (currentChapter != null) {
+                appendLine()
+                appendLine("当前章节：第${currentChapter.chapterNumber}章 ${currentChapter.title}")
+            }
+
+            appendLine()
+            appendLine("待修改的文本：")
+            appendLine(selectedText)
+
+            if (customRequest.isNotBlank()) {
+                appendLine()
+                appendLine("用户修改要求：$customRequest")
+            }
+
+            appendLine()
+            appendLine("请根据修改要求对上述文本进行修改。保持与原文风格一致，保持上下文连贯。直接输出修改后的文本，不要加任何解释、标题或标记。")
         }
     }
 
