@@ -17,9 +17,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -61,6 +66,8 @@ fun WorldBookListScreen(
     var editingWorldBook by remember { mutableStateOf<WorldBook?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var worldBookToDelete by remember { mutableStateOf<WorldBook?>(null) }
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuWorldBook by remember { mutableStateOf<WorldBook?>(null) }
 
     Scaffold(
         topBar = {
@@ -103,14 +110,79 @@ fun WorldBookListScreen(
                             worldBook = worldBook,
                             onClick = { onNavigateToDetail(worldBook.id) },
                             onLongClick = {
-                                worldBookToDelete = worldBook
-                                showDeleteDialog = true
+                                contextMenuWorldBook = worldBook
+                                showContextMenu = true
                             }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showContextMenu && contextMenuWorldBook != null) {
+        AlertDialog(
+            onDismissRequest = { showContextMenu = false },
+            title = { Text(contextMenuWorldBook!!.name) },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            editingWorldBook = contextMenuWorldBook
+                            showEditDialog = true
+                            showContextMenu = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(stringResource(R.string.worldbook_edit))
+                    }
+                    TextButton(
+                        onClick = {
+                            viewModel.copyWorldBook(contextMenuWorldBook!!.id)
+                            showContextMenu = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(stringResource(R.string.worldbook_copy))
+                    }
+                    TextButton(
+                        onClick = {
+                            worldBookToDelete = contextMenuWorldBook
+                            showDeleteDialog = true
+                            showContextMenu = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            stringResource(R.string.worldbook_delete_title),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showContextMenu = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     if (showEditDialog) {

@@ -46,6 +46,9 @@
     <string name="worldbook_delete_title">删除世界书</string>
     <string name="worldbook_delete_message">确定要删除世界书「%1$s」吗？</string>
     <string name="worldbook_list_empty">暂无世界书，点击右下角添加</string>
+    <string name="worldbook_edit">编辑</string>
+    <string name="worldbook_copy">复制</string>
+    <string name="worldbook_copy_suffix">（副本）</string>
     <string name="worldbook_detail_title">世界书详情</string>
     <string name="worldbook_rules_title">规则</string>
     <string name="worldbook_rule_create_title">创建规则</string>

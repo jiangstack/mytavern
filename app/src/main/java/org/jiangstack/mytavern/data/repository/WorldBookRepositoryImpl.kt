@@ -39,6 +39,19 @@ class WorldBookRepositoryImpl(
         worldBookDao.delete(worldBook.toEntity())
     }
 
+    override suspend fun copyWorldBook(worldBookId: Long): Long {
+        val original = getWorldBookById(worldBookId) ?: return 0
+        val newWorldBook = WorldBook(
+            name = "${original.name}（副本）",
+            description = original.description
+        )
+        val newId = insertWorldBook(newWorldBook)
+        original.rules.forEach { rule ->
+            insertRule(rule.copy(id = 0, worldBookId = newId))
+        }
+        return newId
+    }
+
     override fun getRulesByWorldBookId(worldBookId: Long): Flow<List<WorldBookRule>> {
         return worldBookRuleDao.getByWorldBookId(worldBookId).map { list ->
             list.map { it.toDomain() }

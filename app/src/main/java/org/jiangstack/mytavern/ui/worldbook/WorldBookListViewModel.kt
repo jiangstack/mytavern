@@ -31,6 +31,12 @@ class WorldBookListViewModel(
         }
     }
 
+    fun copyWorldBook(worldBookId: Long) {
+        viewModelScope.launch {
+            worldBookRepository.copyWorldBook(worldBookId)
+        }
+    }
+
     companion object {
         fun factory(repository: WorldBookRepository): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
