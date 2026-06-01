@@ -28,13 +28,16 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +76,8 @@ fun CharacterListScreen(
     val viewModel: CharacterListViewModel = viewModel(
         factory = CharacterListViewModel.factory(
             container.characterRepository,
-            container.userPreferencesRepository
+            container.userPreferencesRepository,
+            container.llmService
         )
     )
 
@@ -159,6 +164,11 @@ fun CharacterListScreen(
         }
     }
 
+    val isGenerating by viewModel.isGenerating.collectAsState()
+    val aiGeneratedName by viewModel.aiGeneratedName.collectAsState()
+    val aiGeneratedDescription by viewModel.aiGeneratedDescription.collectAsState()
+    val generateError by viewModel.generateError.collectAsState()
+
     if (showEditDialog) {
         CharacterEditDialog(
             character = editingCharacter,
@@ -168,11 +178,23 @@ fun CharacterListScreen(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
-            onDismiss = { showEditDialog = false },
+            onDismiss = {
+                showEditDialog = false
+                viewModel.resetGeneratedFields()
+                viewModel.clearGenerateError()
+            },
             onConfirm = { character ->
                 viewModel.saveCharacter(character)
                 showEditDialog = false
-            }
+                viewModel.resetGeneratedFields()
+                viewModel.clearGenerateError()
+            },
+            isGenerating = isGenerating,
+            aiGeneratedName = aiGeneratedName,
+            aiGeneratedDescription = aiGeneratedDescription,
+            generateError = generateError,
+            onGenerate = { prompt -> viewModel.generateCharacter(prompt) },
+            onClearGenerateError = { viewModel.clearGenerateError() }
         )
     }
 
@@ -324,11 +346,28 @@ private fun CharacterEditDialog(
     avatarUri: String?,
     onPickAvatar: () -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (Character) -> Unit
+    onConfirm: (Character) -> Unit,
+    isGenerating: Boolean = false,
+    aiGeneratedName: String = "",
+    aiGeneratedDescription: String = "",
+    generateError: String? = null,
+    onGenerate: (String) -> Unit = {},
+    onClearGenerateError: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf(character?.name ?: "") }
     var description by remember { mutableStateOf(character?.description ?: "") }
     var type by remember { mutableStateOf(character?.type ?: CharacterType.AI) }
+    var aiPrompt by remember { mutableStateOf("") }
+
+    // 当 AI 生成了新的内容时，自动填充
+    LaunchedEffect(aiGeneratedName, aiGeneratedDescription) {
+        if (aiGeneratedName.isNotBlank()) {
+            name = aiGeneratedName
+        }
+        if (aiGeneratedDescription.isNotBlank()) {
+            description = aiGeneratedDescription
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -374,6 +413,49 @@ private fun CharacterEditDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // AI 生成区域（仅在创建新角色时显示）
+                if (character == null) {
+                    OutlinedTextField(
+                        value = aiPrompt,
+                        onValueChange = { aiPrompt = it },
+                        label = { Text(stringResource(R.string.character_ai_generate_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isGenerating
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { onGenerate(aiPrompt) },
+                        enabled = aiPrompt.isNotBlank() && !isGenerating,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.character_ai_generating))
+                        } else {
+                            Text(stringResource(R.string.character_ai_generate))
+                        }
+                    }
+
+                    // 显示错误信息
+                    if (generateError != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = generateError,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
