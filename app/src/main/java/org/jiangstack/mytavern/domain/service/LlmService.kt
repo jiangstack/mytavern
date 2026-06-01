@@ -78,7 +78,7 @@ class LlmService(
                     requestMessages.addAll(
                         messages.map {
                             Message(
-                                role = if (it.senderId == null) "user" else "assistant",
+                                role = it.role ?: if (it.senderId == null) "user" else "assistant",
                                 content = formatMessageContent(it, userName)
                             )
                         }
@@ -104,7 +104,7 @@ class LlmService(
                 ApiType.ANTHROPIC -> {
                     val anthropicMessages = messages.map {
                         AnthropicMessage(
-                            role = if (it.senderId == null) "user" else "assistant",
+                            role = it.role ?: if (it.senderId == null) "user" else "assistant",
                             content = formatMessageContent(it, userName)
                         )
                     }
@@ -150,7 +150,7 @@ class LlmService(
                 requestMessages.addAll(
                     messages.map {
                         Message(
-                            role = if (it.senderId == null) "user" else "assistant",
+                            role = it.role ?: if (it.senderId == null) "user" else "assistant",
                             content = formatMessageContent(it, userName)
                         )
                     }
@@ -266,6 +266,7 @@ class LlmService(
     )
 
     private fun formatMessageContent(message: ChatMessage, userName: String? = null): String {
+        if (message.role == "system") return message.content
         val prefix = when {
             message.senderId == null -> userName ?: "用户"
             else -> message.senderName ?: "AI"

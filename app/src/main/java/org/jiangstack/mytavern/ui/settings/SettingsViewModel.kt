@@ -75,6 +75,14 @@ class SettingsViewModel(
         }
     }
 
+    fun copyConfig(config: LlmConfig, suffix: String) {
+        viewModelScope.launch {
+            llmConfigRepository.insertConfig(
+                config.copy(id = 0, name = "${config.name}$suffix")
+            )
+        }
+    }
+
     fun setDefaultLlmConfig(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultLlmConfigId(id)

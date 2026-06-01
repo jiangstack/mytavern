@@ -77,6 +77,8 @@
     <string name="llm_config_list_empty">暂无 LLM 配置</string>
     <string name="llm_config_default_label">默认</string>
     <string name="llm_config_set_default">设为默认</string>
+    <string name="llm_config_copy">复制</string>
+    <string name="llm_config_copy_suffix">（副本）</string>
 
     <!-- Chat -->
     <string name="chat_create_title">创建聊天</string>

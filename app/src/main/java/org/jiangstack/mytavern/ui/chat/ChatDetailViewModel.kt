@@ -303,7 +303,8 @@ class ChatDetailViewModel(
         val instructionMessage = ChatMessage(
             sessionId = sessionId,
             senderId = null,
-            content = instructionContent
+            content = instructionContent,
+            role = "system"
         )
         val historyMessages = currentMessages.takeLast(historyCount.value)
         val allMessages = historyMessages + instructionMessage

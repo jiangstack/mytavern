@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material3.AlertDialog
@@ -24,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -212,6 +214,7 @@ fun SettingsScreen(
                 }
             } else {
                 items(configs, key = { "llm_${it.id}" }) { config ->
+                    val copySuffix = stringResource(R.string.llm_config_copy_suffix)
                     LlmConfigItem(
                         config = config,
                         isDefault = config.id == defaultLlmConfigId,
@@ -225,6 +228,9 @@ fun SettingsScreen(
                         },
                         onSetDefault = {
                             viewModel.setDefaultLlmConfig(config.id)
+                        },
+                        onCopy = {
+                            viewModel.copyConfig(config, copySuffix)
                         }
                     )
                 }
@@ -488,7 +494,8 @@ private fun LlmConfigItem(
     isDefault: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onSetDefault: () -> Unit
+    onSetDefault: () -> Unit,
+    onCopy: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -516,6 +523,14 @@ private fun LlmConfigItem(
                     text = "${config.apiType.name} | ${config.model}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = onCopy) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = stringResource(R.string.llm_config_copy),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

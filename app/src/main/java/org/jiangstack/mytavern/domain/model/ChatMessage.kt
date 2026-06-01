@@ -10,5 +10,6 @@ data class ChatMessage(
     val parentMessageId: Long? = null,
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
-    val totalTokens: Int? = null
+    val totalTokens: Int? = null,
+    val role: String? = null
 )
