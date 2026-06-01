@@ -129,6 +129,7 @@ class NovelChapterEditViewModel(
             try {
                 val systemPrompt = buildNovelPrompt(customRequest)
                 val temperature = userPreferencesRepository.temperature.first()
+                val maxTokens = userPreferencesRepository.maxTokens.first()
 
                 // 构造一条消息让 AI 续写
                 val promptMessage = org.jiangstack.mytavern.domain.model.ChatMessage(
@@ -143,6 +144,7 @@ class NovelChapterEditViewModel(
                     messages = listOf(promptMessage),
                     systemPrompt = systemPrompt,
                     temperature = temperature,
+                    maxTokens = maxTokens,
                     thinkingEnabled = false
                 ).collect { chunk ->
                     if (chunk.content.isNotBlank()) {

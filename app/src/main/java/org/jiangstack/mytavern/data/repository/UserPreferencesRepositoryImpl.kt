@@ -24,6 +24,7 @@ class UserPreferencesRepositoryImpl(
     private val themeModeKey = intPreferencesKey("theme_mode")
     private val chatHistoryCountKey = intPreferencesKey("chat_history_count")
     private val temperatureKey = floatPreferencesKey("temperature")
+    private val maxTokensKey = intPreferencesKey("max_tokens")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -90,6 +91,17 @@ class UserPreferencesRepositoryImpl(
     override suspend fun setTemperature(temp: Float) {
         context.dataStore.edit { preferences ->
             preferences[temperatureKey] = temp.coerceIn(0.0f, 2.0f)
+        }
+    }
+
+    override val maxTokens: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[maxTokensKey] ?: 4096
+        }
+
+    override suspend fun setMaxTokens(value: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[maxTokensKey] = value.coerceIn(256, 32768)
         }
     }
 }

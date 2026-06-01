@@ -50,6 +50,9 @@ class SettingsViewModel(
     val temperature: StateFlow<Float> = userPreferencesRepository.temperature
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
 
+    val maxTokens: StateFlow<Int> = userPreferencesRepository.maxTokens
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 4096)
+
     val quickReplies: StateFlow<List<QuickReply>> = quickReplyRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -104,6 +107,12 @@ class SettingsViewModel(
     fun setTemperature(temp: Float) {
         viewModelScope.launch {
             userPreferencesRepository.setTemperature(temp.coerceIn(0.0f, 2.0f))
+        }
+    }
+
+    fun setMaxTokens(value: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMaxTokens(value.coerceIn(256, 32768))
         }
     }
 

@@ -78,6 +78,7 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val chatHistoryCount by viewModel.chatHistoryCount.collectAsState()
     val temperature by viewModel.temperature.collectAsState()
+    val maxTokens by viewModel.maxTokens.collectAsState()
     val quickReplies by viewModel.quickReplies.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
@@ -291,6 +292,24 @@ fun SettingsScreen(
                             onValueChange = { viewModel.setTemperature(it) },
                             valueRange = 0.0f..2.0f,
                             steps = 19
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.settings_max_tokens),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "$maxTokens",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Slider(
+                            value = maxTokens.toFloat(),
+                            onValueChange = { viewModel.setMaxTokens(it.toInt()) },
+                            valueRange = 256f..32768f,
+                            steps = 31
                         )
                     }
                 }

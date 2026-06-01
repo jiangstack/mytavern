@@ -64,6 +64,7 @@
     <string name="settings_section_chat">聊天</string>
     <string name="settings_chat_history_count">历史消息数量</string>
     <string name="settings_temperature">温度</string>
+    <string name="settings_max_tokens">最大输出 Token</string>
 
     <!-- LLM Config -->
     <string name="llm_config_create_title">创建 LLM 配置</string>

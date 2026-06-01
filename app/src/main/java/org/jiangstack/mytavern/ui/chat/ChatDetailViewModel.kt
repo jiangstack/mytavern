@@ -81,6 +81,9 @@ class ChatDetailViewModel(
     val temperature: StateFlow<Float> = userPreferencesRepository.temperature
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
 
+    val maxTokens: StateFlow<Int> = userPreferencesRepository.maxTokens
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 4096)
+
     val sessionStateEnabled: StateFlow<Boolean> = _session.map { it?.sessionStateEnabled == true }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -199,6 +202,7 @@ class ChatDetailViewModel(
                 systemPrompt = systemPrompt,
                 thinkingEnabled = enableThinking,
                 temperature = temperature.value,
+                maxTokens = maxTokens.value,
                 tools = tools,
                 userName = userCharacter.value?.name
             ).collect { chunk ->
@@ -230,6 +234,7 @@ class ChatDetailViewModel(
                     systemPrompt = systemPrompt,
                     thinkingEnabled = enableThinking,
                     temperature = temperature.value,
+                    maxTokens = maxTokens.value,
                     tools = null,
                     userName = userCharacter.value?.name
                 ).collect { chunk ->
@@ -322,6 +327,7 @@ class ChatDetailViewModel(
                 thinkingEnabled = enableThinking,
                 isGroupChat = true,
                 temperature = temperature.value,
+                maxTokens = maxTokens.value,
                 tools = tools,
                 userName = userCharacter.value?.name
             ).collect { chunk ->
@@ -354,6 +360,7 @@ class ChatDetailViewModel(
                     thinkingEnabled = enableThinking,
                     isGroupChat = true,
                     temperature = temperature.value,
+                    maxTokens = maxTokens.value,
                     tools = null,
                     userName = userCharacter.value?.name
                 ).collect { chunk ->
@@ -486,6 +493,7 @@ class ChatDetailViewModel(
                         systemPrompt = systemPrompt,
                         thinkingEnabled = enableThinking,
                         temperature = temperature.value,
+                        maxTokens = maxTokens.value,
                         userName = userCharacter.value?.name
                     ).collect { chunk ->
                         if (enableThinking && chunk.reasoningContent.isNotBlank()) {

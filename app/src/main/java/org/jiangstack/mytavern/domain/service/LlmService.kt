@@ -65,6 +65,7 @@ class LlmService(
         thinkingEnabled: Boolean = true,
         isGroupChat: Boolean = false,
         temperature: Float? = null,
+        maxTokens: Int? = null,
         tools: List<Tool>? = null,
         userName: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -87,6 +88,7 @@ class LlmService(
                         model = activeConfig.model,
                         messages = requestMessages,
                         temperature = temperature,
+                        max_tokens = maxTokens,
                         reasoning = if (thinkingEnabled) null else Reasoning(effort = "none"),
                         tools = tools?.takeIf { activeConfig.apiType != ApiType.ANTHROPIC },
                         tool_choice = if (tools != null && activeConfig.apiType != ApiType.ANTHROPIC) "auto" else null
@@ -111,6 +113,7 @@ class LlmService(
                     val request = AnthropicRequest(
                         model = activeConfig.model,
                         messages = anthropicMessages,
+                        max_tokens = maxTokens ?: 2048,
                         temperature = temperature,
                         system = systemPrompt
                     )
@@ -138,6 +141,7 @@ class LlmService(
         thinkingEnabled: Boolean = true,
         isGroupChat: Boolean = false,
         temperature: Float? = null,
+        maxTokens: Int? = null,
         tools: List<Tool>? = null,
         userName: String? = null
     ): Flow<StreamChunk> = flow {
@@ -160,6 +164,7 @@ class LlmService(
                     messages = requestMessages,
                     stream = true,
                     temperature = temperature,
+                    max_tokens = maxTokens,
                     reasoning = if (thinkingEnabled) null else Reasoning(effort = "none"),
                     stream_options = StreamOptions(include_usage = true),
                     tools = tools?.takeIf { activeConfig.apiType != ApiType.ANTHROPIC },

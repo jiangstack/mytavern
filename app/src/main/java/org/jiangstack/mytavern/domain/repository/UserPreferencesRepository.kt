@@ -14,4 +14,6 @@ interface UserPreferencesRepository {
     suspend fun setChatHistoryCount(count: Int)
     val temperature: Flow<Float>
     suspend fun setTemperature(temp: Float)
+    val maxTokens: Flow<Int>
+    suspend fun setMaxTokens(value: Int)
 }

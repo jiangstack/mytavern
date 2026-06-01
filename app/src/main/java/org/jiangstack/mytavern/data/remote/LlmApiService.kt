@@ -42,6 +42,7 @@ data class ChatCompletionRequest(
     val messages: List<Message>,
     val stream: Boolean = false,
     val temperature: Float? = null,
+    val max_tokens: Int? = null,
     val reasoning: Reasoning? = null,
     val stream_options: StreamOptions? = null,
     val tools: List<Tool>? = null,
