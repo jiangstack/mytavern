@@ -13,13 +13,22 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.KeyboardHide
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,9 +54,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import android.view.View
+import android.view.ViewGroup
+import android.widget.EditText
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,8 +113,14 @@ fun NovelChapterEditScreen(
     var showAiModifyDialog by remember { mutableStateOf(false) }
     var modifyRequest by remember { mutableStateOf("") }
     var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
+    var isTextFieldFocused by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val clipboardManager = LocalClipboardManager.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val isKeyboardVisible = androidx.compose.foundation.layout.WindowInsets.ime
+        .getBottom(density) > 0
 
     // 同步纲要文本
     LaunchedEffect(chapter) {
@@ -174,6 +200,7 @@ fun NovelChapterEditScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
         ) {
             // 纲要折叠区
             Row(
@@ -389,37 +416,132 @@ fun NovelChapterEditScreen(
                 }
             }
 
-            // 正文编辑区
-            BasicTextField(
-                value = textFieldValue,
-                onValueChange = { newValue ->
-                    textFieldValue = newValue
-                    viewModel.updateContent(newValue.text)
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                textStyle = TextStyle(
-                    fontSize = 16.sp,
-                    lineHeight = 26.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (editContent.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.novel_chapter_content),
-                                style = TextStyle(
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
+            // 自定义操作栏（替代系统选中菜单）
+            AnimatedVisibility(visible = isTextFieldFocused) {
+                val hasSelection = !textFieldValue.selection.collapsed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (hasSelection) {
+                        Text(
+                            text = stringResource(R.string.novel_ai_modify_selected, textFieldValue.selection.length),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    // 删除选中
+                    IconButton(
+                        onClick = {
+                            val sel = textFieldValue.selection
+                            val newContent = editContent.removeRange(sel.min, sel.max)
+                            viewModel.updateContent(newContent)
+                            textFieldValue = TextFieldValue(
+                                text = newContent,
+                                selection = TextRange(sel.min)
                             )
+                        },
+                        enabled = hasSelection
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.novel_chapter_delete_selection),
+                            tint = if (hasSelection) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.height(20.dp)
+                        )
+                    }
+                    // 复制
+                    IconButton(
+                        onClick = {
+                            val sel = textFieldValue.selection
+                            if (!sel.collapsed) {
+                                val selectedText = editContent.substring(sel.min, sel.max)
+                                clipboardManager.setText(AnnotatedString(selectedText))
+                            }
+                        },
+                        enabled = hasSelection
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.novel_chapter_copy),
+                            modifier = Modifier.height(20.dp)
+                        )
+                    }
+                    // 唤起/隐藏输入法
+                    IconButton(onClick = {
+                        if (isKeyboardVisible) {
+                            keyboardController?.hide()
+                        } else {
+                            keyboardController?.show()
                         }
-                        innerTextField()
+                    }) {
+                        Icon(
+                            if (isKeyboardVisible) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
+                            contentDescription = stringResource(R.string.novel_chapter_toggle_keyboard),
+                            modifier = Modifier.height(20.dp)
+                        )
                     }
                 }
+            }
+
+            // 正文编辑区
+            val customSelectionColors = TextSelectionColors(
+                handleColor = MaterialTheme.colorScheme.primary,
+                backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
             )
+            val interactionSource = remember { MutableInteractionSource() }
+            val rootView = LocalView.current.rootView
+            CompositionLocalProvider(
+                LocalTextSelectionColors provides customSelectionColors
+            ) {
+                BasicTextField(
+                    value = textFieldValue,
+                    onValueChange = { newValue ->
+                        textFieldValue = newValue
+                        viewModel.updateContent(newValue.text)
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .onGloballyPositioned {
+                            // 查找底层 EditText 并禁用自动弹出键盘
+                            val editText = findEditText(rootView)
+                            editText?.showSoftInputOnFocus = false
+                        }
+                        .onFocusChanged { focusState ->
+                            isTextFieldFocused = focusState.isFocused
+                            if (!focusState.isFocused) {
+                                keyboardController?.hide()
+                            }
+                        },
+                    textStyle = TextStyle(
+                        fontSize = 16.sp,
+                        lineHeight = 26.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    interactionSource = interactionSource,
+                    decorationBox = { innerTextField ->
+                        Box {
+                            if (editContent.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.novel_chapter_content),
+                                    style = TextStyle(
+                                        fontSize = 16.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -567,4 +689,18 @@ private fun AiModifyDialog(
             }
         }
     )
+}
+
+/**
+ * 递归查找 View 层级中的 EditText
+ */
+private fun findEditText(view: View): EditText? {
+    if (view is EditText) return view
+    if (view is ViewGroup) {
+        for (i in 0 until view.childCount) {
+            val result = findEditText(view.getChildAt(i))
+            if (result != null) return result
+        }
+    }
+    return null
 }
