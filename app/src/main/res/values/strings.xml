@@ -4,6 +4,7 @@
     <string name="nav_chat">聊天</string>
     <string name="nav_character">角色</string>
     <string name="nav_worldbook">世界书</string>
+    <string name="nav_novel">小说</string>
     <string name="nav_settings">设置</string>
 
     <string name="character_list_title">角色管理</string>
@@ -95,6 +96,37 @@
     <string name="chat_delete_title">删除聊天</string>
     <string name="chat_delete_message">确定要删除聊天「%1$s」吗？</string>
     <string name="chat_new_chat">新聊天</string>
+
+    <!-- Novel -->
+    <string name="novel_list_title">小说</string>
+    <string name="novel_list_empty">暂无小说，点击右下角创建</string>
+    <string name="novel_create_title">创建小说</string>
+    <string name="novel_edit_title">编辑小说</string>
+    <string name="novel_name">小说名称</string>
+    <string name="novel_description">小说简介</string>
+    <string name="novel_select_worldbook">选择世界书</string>
+    <string name="novel_select_characters">选择角色（可多选）</string>
+    <string name="novel_delete_title">删除小说</string>
+    <string name="novel_delete_message">确定要删除小说「%1$s」吗？所有章节将一并删除。</string>
+    <string name="novel_detail_title">小说详情</string>
+    <string name="novel_chapters_title">章节</string>
+    <string name="novel_chapter_empty">暂无章节，点击右下角添加</string>
+    <string name="novel_chapter_add">添加章节</string>
+    <string name="novel_chapter_number">章节号</string>
+    <string name="novel_chapter_title">章节标题</string>
+    <string name="novel_chapter_outline">章节纲要</string>
+    <string name="novel_chapter_content">章节正文</string>
+    <string name="novel_chapter_delete_title">删除章节</string>
+    <string name="novel_chapter_delete_message">确定要删除第%1$d章「%2$s」吗？</string>
+    <string name="novel_chapter_edit_title">编辑章节</string>
+    <string name="novel_worldbook_none">未关联世界书</string>
+    <string name="novel_characters_none">未选择角色</string>
+    <string name="novel_word_count">字数：%1$d</string>
+    <string name="novel_ai_continue">AI 续写</string>
+    <string name="novel_ai_continue_hint">可输入额外要求…</string>
+    <string name="novel_ai_accept">采纳</string>
+    <string name="novel_ai_discard">丢弃</string>
+    <string name="novel_ai_generating">AI 正在创作…</string>
 
     <!-- Quick Reply -->
     <string name="settings_section_quick_reply">快捷回复</string>

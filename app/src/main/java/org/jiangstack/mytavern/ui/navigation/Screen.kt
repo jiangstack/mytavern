@@ -16,6 +16,14 @@ sealed class Screen(val route: String) {
         fun createRoute(sessionId: Long) = "chat_detail/$sessionId"
     }
 
+    data object NovelList : Screen("novel_list")
+    data object NovelDetail : Screen("novel_detail/{novelId}") {
+        fun createRoute(novelId: Long) = "novel_detail/$novelId"
+    }
+    data object NovelChapterEdit : Screen("novel_chapter_edit/{novelId}/{chapterId}") {
+        fun createRoute(novelId: Long, chapterId: Long) = "novel_chapter_edit/$novelId/$chapterId"
+    }
+
     data object Settings : Screen("settings")
     data object HttpLog : Screen("http_log")
 }

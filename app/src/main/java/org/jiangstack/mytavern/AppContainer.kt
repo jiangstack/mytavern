@@ -14,6 +14,7 @@ import org.jiangstack.mytavern.data.local.MIGRATION_3_4
 import org.jiangstack.mytavern.data.local.MIGRATION_4_5
 import org.jiangstack.mytavern.data.local.MIGRATION_5_6
 import org.jiangstack.mytavern.data.local.MIGRATION_6_7
+import org.jiangstack.mytavern.data.local.MIGRATION_7_8
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
@@ -22,6 +23,7 @@ import org.jiangstack.mytavern.data.repository.QuickReplyRepositoryImpl
 import org.jiangstack.mytavern.data.repository.SessionCharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.UserPreferencesRepositoryImpl
 import org.jiangstack.mytavern.data.repository.WorldBookRepositoryImpl
+import org.jiangstack.mytavern.data.repository.NovelRepositoryImpl
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
@@ -29,6 +31,7 @@ import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
+import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.service.LlmService
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -39,7 +42,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -64,6 +67,9 @@ class AppContainer(context: Context) {
 
     val sessionStateRepository: org.jiangstack.mytavern.domain.repository.SessionStateRepository =
         org.jiangstack.mytavern.data.repository.SessionStateRepositoryImpl(database.sessionStateDao())
+
+    val novelRepository: NovelRepository =
+        NovelRepositoryImpl(database.novelDao(), database.novelChapterDao(), database.novelCharacterDao())
 
     val httpLogRepository: HttpLogRepository = HttpLogRepository()
 

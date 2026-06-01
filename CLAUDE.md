@@ -57,6 +57,7 @@ org.jiangstack.mytavern
 │   ├── character/      # 角色管理界面
 │   ├── worldbook/      # 世界书管理界面
 │   ├── chat/           # 聊天界面
+│   ├── novel/          # 小说创作界面
 │   └── settings/       # 设置界面
 ├── AppContainer.kt     # 手动 DI 容器：单例数据库、Repository、Retrofit、OkHttp
 ├── MyTavernApplication.kt
@@ -77,6 +78,9 @@ org.jiangstack.mytavern
 | `worldbook_detail/{worldBookId}` | 世界书详情/编辑 |
 | `chat_list` | 聊天会话列表 |
 | `chat_detail/{sessionId}` | 聊天详情 |
+| `novel_list` | 小说列表 |
+| `novel_detail/{novelId}` | 小说详情/章节管理 |
+| `novel_chapter_edit/{novelId}/{chapterId}` | 章节编辑器 |
 | `settings` | 设置 |
 
 ## LLM 服务架构
@@ -111,11 +115,21 @@ org.jiangstack.mytavern
 ## Room 数据库
 
 - **数据库名**：`mytavern.db`
-- **当前版本**：5
-- **迁移**：`Migration_1_2`、`Migration_2_3`、`Migration_3_4`、`Migration_4_5`（位于 `data/local/`）
+- **当前版本**：8
+- **迁移**：`Migration_1_2` ~ `Migration_7_8`（位于 `data/local/`）
   - `Migration_3_4`：新增 `session_characters` 关联表（支持群聊多角色）
   - `Migration_4_5`：为 `chat_messages` 表添加 `promptTokens`、`completionTokens`、`totalTokens` 字段（LLM usage 统计）
+  - `Migration_7_8`：新增 `novels`、`novel_chapters`、`novel_characters` 表（小说创作功能）
 - **schema 导出**：`ksp { arg("room.schemaLocation", "$projectDir/schemas") }`
+
+## 小说创作功能
+
+小说模块包含三层结构：
+- **NovelListScreen**：小说列表，支持创建/删除小说，关联世界书和角色
+- **NovelDetailScreen**：小说详情，管理章节（添加/删除/编辑纲要），可编辑小说信息
+- **NovelChapterEditScreen**：章节编辑器，支持正文编辑（自动保存）、纲要折叠编辑、AI 续写
+
+AI 续写通过 `LlmService.sendChatMessageStream()` 实现，系统提示词包含：小说名称/设定、世界书（名称+描述+规则）、角色（名称+描述）、所有章节纲要、当前章节已有正文（末尾 2000 字）、用户自定义要求。流式输出后用户可选择"采纳"（追加到正文）或"丢弃"。
 
 ## 导出/导入
 

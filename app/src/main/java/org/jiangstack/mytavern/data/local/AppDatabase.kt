@@ -11,6 +11,9 @@ import org.jiangstack.mytavern.data.local.dao.WorldBookDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookRuleDao
 import org.jiangstack.mytavern.data.local.dao.QuickReplyDao
 import org.jiangstack.mytavern.data.local.dao.SessionStateDao
+import org.jiangstack.mytavern.data.local.dao.NovelDao
+import org.jiangstack.mytavern.data.local.dao.NovelChapterDao
+import org.jiangstack.mytavern.data.local.dao.NovelCharacterDao
 import org.jiangstack.mytavern.data.local.entity.CharacterEntity
 import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 import org.jiangstack.mytavern.data.local.entity.ChatSessionEntity
@@ -20,6 +23,9 @@ import org.jiangstack.mytavern.data.local.entity.SessionCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
 import org.jiangstack.mytavern.data.local.entity.SessionStateEntity
+import org.jiangstack.mytavern.data.local.entity.NovelEntity
+import org.jiangstack.mytavern.data.local.entity.NovelChapterEntity
+import org.jiangstack.mytavern.data.local.entity.NovelCharacterEntity
 
 @Database(
     entities = [
@@ -31,9 +37,12 @@ import org.jiangstack.mytavern.data.local.entity.SessionStateEntity
         LlmConfigEntity::class,
         SessionCharacterEntity::class,
         SessionStateEntity::class,
-        QuickReplyEntity::class
+        QuickReplyEntity::class,
+        NovelEntity::class,
+        NovelChapterEntity::class,
+        NovelCharacterEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,4 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionCharacterDao(): SessionCharacterDao
     abstract fun sessionStateDao(): SessionStateDao
     abstract fun quickReplyDao(): QuickReplyDao
+    abstract fun novelDao(): NovelDao
+    abstract fun novelChapterDao(): NovelChapterDao
+    abstract fun novelCharacterDao(): NovelCharacterDao
 }

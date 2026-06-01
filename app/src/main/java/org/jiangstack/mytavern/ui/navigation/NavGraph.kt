@@ -14,6 +14,9 @@ import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
 import org.jiangstack.mytavern.ui.settings.HttpLogScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
+import org.jiangstack.mytavern.ui.novel.NovelListScreen
+import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
+import org.jiangstack.mytavern.ui.novel.NovelChapterEditScreen
 
 @Composable
 fun NavGraph(
@@ -61,6 +64,35 @@ fun NavGraph(
             val sessionId = backStackEntry.arguments?.getString("sessionId")?.toLongOrNull() ?: 0L
             ChatDetailScreen(
                 sessionId = sessionId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.NovelList.route) {
+            NovelListScreen(
+                onNavigateToDetail = { novelId ->
+                    navController.navigate(Screen.NovelDetail.createRoute(novelId))
+                }
+            )
+        }
+
+        composable(Screen.NovelDetail.route) { backStackEntry ->
+            val novelId = backStackEntry.arguments?.getString("novelId")?.toLongOrNull() ?: 0L
+            NovelDetailScreen(
+                novelId = novelId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToChapterEdit = { novelId, chapterId ->
+                    navController.navigate(Screen.NovelChapterEdit.createRoute(novelId, chapterId))
+                }
+            )
+        }
+
+        composable(Screen.NovelChapterEdit.route) { backStackEntry ->
+            val novelId = backStackEntry.arguments?.getString("novelId")?.toLongOrNull() ?: 0L
+            val chapterId = backStackEntry.arguments?.getString("chapterId")?.toLongOrNull() ?: 0L
+            NovelChapterEditScreen(
+                novelId = novelId,
+                chapterId = chapterId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
