@@ -432,152 +432,156 @@ private fun MessageBubble(
         parseThinkContent(message.content)
     }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {},
                 onLongClick = onDelete
             ),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Top
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
-        if (!isUser && avatarUri != null) {
-            AsyncImage(
-                model = avatarUri,
-                contentDescription = null,
+        if (!isUser) {
+            // 头像和名称在单独一行
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(top = 4.dp)
-                    .size(32.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
-        Column(
-            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
-        ) {
-            if (!isUser) {
+                    .padding(bottom = 4.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onDoubleTap = { onTriggerCharacterReply?.invoke() })
+                    }
+            ) {
+                if (avatarUri != null) {
+                    AsyncImage(
+                        model = avatarUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
                     text = message.senderName ?: aiName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier
-                        .padding(
-                            start = if (avatarUri != null) 0.dp else 8.dp,
-                            bottom = 2.dp
-                        )
-                        .pointerInput(Unit) {
-                            detectTapGestures(onDoubleTap = { onTriggerCharacterReply?.invoke() })
-                        }
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
                 )
-            }
-
-            Card(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .padding(horizontal = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isUser)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.secondaryContainer
-                ),
-                shape = RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = if (isUser) 16.dp else 4.dp,
-                    bottomEnd = if (isUser) 4.dp else 16.dp
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    if (thinkingEnabled && displayContent.reasoning.isNotEmpty()) {
-                        ThinkBlock(reasoning = displayContent.reasoning)
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    Text(
-                        text = displayContent.content,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            if (!isUser && (message.promptTokens != null || message.completionTokens != null || message.totalTokens != null)) {
-                Text(
-                    text = buildString {
-                        message.promptTokens?.let { append("提示: $it ") }
-                        message.completionTokens?.let { append("补全: $it ") }
-                        message.totalTokens?.let { append("总计: $it") }
-                    }.trim(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(
-                        start = if (avatarUri != null) 0.dp else 8.dp,
-                        top = 2.dp
-                    )
-                )
-            }
-
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (!isUser && onRefresh != null) {
-                    IconButton(
-                        onClick = onRefresh,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = "重新生成",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (isUser && onEdit != null) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = "编辑",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (onDelete != null) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "删除",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
         }
 
-        if (isUser && avatarUri != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            AsyncImage(
-                model = avatarUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .size(32.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+        Row(
+            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+            ) {
+                Card(
+                    modifier = Modifier
+                        .widthIn(max = 280.dp)
+                        .padding(horizontal = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isUser)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    shape = RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
+                        bottomStart = if (isUser) 16.dp else 4.dp,
+                        bottomEnd = if (isUser) 4.dp else 16.dp
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        if (thinkingEnabled && displayContent.reasoning.isNotEmpty()) {
+                            ThinkBlock(reasoning = displayContent.reasoning)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        Text(
+                            text = displayContent.content,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                if (!isUser && (message.promptTokens != null || message.completionTokens != null || message.totalTokens != null)) {
+                    Text(
+                        text = buildString {
+                            message.promptTokens?.let { append("提示: $it ") }
+                            message.completionTokens?.let { append("补全: $it ") }
+                            message.totalTokens?.let { append("总计: $it") }
+                        }.trim(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(
+                            start = 8.dp,
+                            top = 2.dp
+                        )
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!isUser && onRefresh != null) {
+                        IconButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = "重新生成",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (isUser && onEdit != null) {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = "编辑",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "删除",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (isUser && avatarUri != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                AsyncImage(
+                    model = avatarUri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .size(36.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
 }
@@ -591,72 +595,67 @@ private fun StreamingMessageBubble(
     avatarUri: String?,
     thinkingEnabled: Boolean
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.Top
+        horizontalAlignment = Alignment.Start
     ) {
-        if (avatarUri != null) {
-            AsyncImage(
-                model = avatarUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .size(32.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
-        Column(
-            horizontalAlignment = Alignment.Start
+        // 头像和名称在单独一行
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 4.dp)
         ) {
+            if (avatarUri != null) {
+                AsyncImage(
+                    model = avatarUri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             Text(
                 text = aiName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(
-                    start = if (avatarUri != null) 0.dp else 8.dp,
-                    bottom = 2.dp
-                )
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.secondary
             )
+        }
 
-            Card(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .padding(horizontal = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                shape = RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = 4.dp,
-                    bottomEnd = 16.dp
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    if (thinkingEnabled && reasoning.isNotEmpty()) {
-                        ThinkBlock(reasoning = reasoning)
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+        Card(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .padding(horizontal = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 4.dp,
+                bottomEnd = 16.dp
+            )
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                if (thinkingEnabled && reasoning.isNotEmpty()) {
+                    ThinkBlock(reasoning = reasoning)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                    if (content.isNotEmpty()) {
-                        Text(
-                            text = content,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                if (content.isNotEmpty()) {
+                    Text(
+                        text = content,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
 
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(top = 8.dp)
-                                .size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                    }
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .size(16.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }
