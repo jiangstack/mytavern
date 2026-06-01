@@ -55,6 +55,13 @@ class NovelChapterEditViewModel(
     private val _isAiGenerating = MutableStateFlow(false)
     val isAiGenerating: StateFlow<Boolean> = _isAiGenerating
 
+    // AI 纲要总结状态
+    private val _outlineSummary = MutableStateFlow("")
+    val outlineSummary: StateFlow<String> = _outlineSummary
+
+    private val _isSummarizingOutline = MutableStateFlow(false)
+    val isSummarizingOutline: StateFlow<Boolean> = _isSummarizingOutline
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
@@ -184,6 +191,75 @@ class NovelChapterEditViewModel(
 
     fun discardAiContent() {
         _aiStreamingContent.value = ""
+    }
+
+    fun summarizeOutline() {
+        val content = _editContent.value
+        if (content.isBlank() || _isSummarizingOutline.value) return
+        aiJob?.cancel()
+        aiJob = viewModelScope.launch {
+            _isSummarizingOutline.value = true
+            _outlineSummary.value = ""
+            _errorMessage.value = null
+
+            try {
+                val chapter = _chapter.value
+                val temperature = userPreferencesRepository.temperature.first()
+                val maxTokens = userPreferencesRepository.maxTokens.first()
+
+                val systemPrompt = buildString {
+                    appendLine("你是一位小说编辑助手。请根据以下章节正文，总结出简洁的章节纲要。")
+                    appendLine()
+                    if (chapter != null) {
+                        appendLine("章节：第${chapter.chapterNumber}章 ${chapter.title}")
+                    }
+                    appendLine()
+                    appendLine("章节正文：")
+                    appendLine(content)
+                    appendLine()
+                    appendLine("请用简洁的语言总结本章的主要情节、关键事件和转折点。直接输出纲要内容，不要加任何标题或解释。控制在200字以内。")
+                }
+
+                val promptMessage = org.jiangstack.mytavern.domain.model.ChatMessage(
+                    sessionId = 0,
+                    content = "请总结本章纲要。",
+                    role = "user"
+                )
+
+                val fullContent = StringBuilder()
+
+                llmService.sendChatMessageStream(
+                    messages = listOf(promptMessage),
+                    systemPrompt = systemPrompt,
+                    temperature = temperature,
+                    maxTokens = 512,
+                    thinkingEnabled = false
+                ).collect { chunk ->
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        _outlineSummary.value = fullContent.toString()
+                    }
+                }
+            } catch (e: CancellationException) {
+                // 用户取消
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "纲要总结失败"
+            } finally {
+                _isSummarizingOutline.value = false
+            }
+        }
+    }
+
+    fun acceptOutlineSummary() {
+        val summary = _outlineSummary.value
+        if (summary.isNotBlank()) {
+            updateOutline(summary)
+            _outlineSummary.value = ""
+        }
+    }
+
+    fun discardOutlineSummary() {
+        _outlineSummary.value = ""
     }
 
     fun clearError() {

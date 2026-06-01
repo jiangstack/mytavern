@@ -124,6 +124,7 @@
     <string name="novel_characters_none">未选择角色</string>
     <string name="novel_word_count">字数：%1$d</string>
     <string name="novel_ai_continue">AI 续写</string>
+    <string name="novel_outline_summarize">AI 总结纲要</string>
     <string name="novel_ai_continue_hint">可输入额外要求…</string>
     <string name="novel_ai_accept">采纳</string>
     <string name="novel_ai_discard">丢弃</string>

@@ -581,7 +581,7 @@ private fun LlmConfigEditDialog(
     var apiKey by remember { mutableStateOf(config?.apiKey ?: "") }
     var model by remember { mutableStateOf(config?.model ?: "") }
 
-    val apiTypes = listOf(ApiType.OPENAI, ApiType.OPENRESPONSES, ApiType.ANTHROPIC)
+    val apiTypes = listOf(ApiType.OPENAI)
     val selectedIndex = apiTypes.indexOf(apiType)
 
     AlertDialog(

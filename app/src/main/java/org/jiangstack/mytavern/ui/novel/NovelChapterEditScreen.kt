@@ -78,6 +78,8 @@ fun NovelChapterEditScreen(
     val editContent by viewModel.editContent.collectAsState()
     val aiStreamingContent by viewModel.aiStreamingContent.collectAsState()
     val isAiGenerating by viewModel.isAiGenerating.collectAsState()
+    val outlineSummary by viewModel.outlineSummary.collectAsState()
+    val isSummarizingOutline by viewModel.isSummarizingOutline.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var outlineExpanded by remember { mutableStateOf(false) }
@@ -161,19 +163,84 @@ fun NovelChapterEditScreen(
             }
 
             AnimatedVisibility(visible = outlineExpanded) {
-                OutlinedTextField(
-                    value = outlineText,
-                    onValueChange = {
-                        outlineText = it
-                        viewModel.updateOutline(it)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    minLines = 2,
-                    maxLines = 6,
-                    placeholder = { Text(stringResource(R.string.novel_chapter_outline)) }
-                )
+                Column {
+                    OutlinedTextField(
+                        value = outlineText,
+                        onValueChange = {
+                            outlineText = it
+                            viewModel.updateOutline(it)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        minLines = 2,
+                        maxLines = 6,
+                        placeholder = { Text(stringResource(R.string.novel_chapter_outline)) }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.summarizeOutline() },
+                            enabled = !isSummarizingOutline && editContent.isNotBlank()
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.height(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.novel_outline_summarize))
+                        }
+                        if (isSummarizingOutline) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+                        }
+                    }
+                    // 纲要总结预览
+                    if (outlineSummary.isNotBlank()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+                                    MaterialTheme.shapes.medium
+                                )
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = outlineSummary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 150.dp)
+                                    .verticalScroll(rememberScrollState())
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row {
+                                Button(
+                                    onClick = {
+                                        viewModel.acceptOutlineSummary()
+                                        outlineText = viewModel.chapter.value?.outline ?: outlineText
+                                    },
+                                    enabled = !isSummarizingOutline
+                                ) {
+                                    Text(stringResource(R.string.novel_ai_accept))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = { viewModel.discardOutlineSummary() },
+                                    enabled = !isSummarizingOutline
+                                ) {
+                                    Text(stringResource(R.string.novel_ai_discard))
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
