@@ -123,6 +123,8 @@
     <string name="novel_chapter_content">章节正文</string>
     <string name="novel_chapter_delete_title">删除章节</string>
     <string name="novel_chapter_delete_message">确定要删除第%1$d章「%2$s」吗？</string>
+    <string name="novel_chapter_clear_content_title">清空章节内容</string>
+    <string name="novel_chapter_clear_content_message">确定要清空第%1$d章「%2$s」的正文内容吗？章节纲要将保留。</string>
     <string name="novel_chapter_edit_title">编辑章节</string>
     <string name="novel_worldbook_none">未关联世界书</string>
     <string name="novel_characters_none">未选择角色</string>

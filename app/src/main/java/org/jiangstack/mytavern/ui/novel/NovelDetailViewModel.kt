@@ -103,6 +103,12 @@ class NovelDetailViewModel(
         }
     }
 
+    fun clearChapterContent(chapter: NovelChapter) {
+        viewModelScope.launch {
+            novelRepository.updateChapter(chapter.copy(content = "", updatedAt = System.currentTimeMillis()))
+        }
+    }
+
     private suspend fun refreshNovel() {
         _novel.value = novelRepository.getNovelById(novelId)
     }

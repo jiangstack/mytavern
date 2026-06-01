@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -90,6 +91,8 @@ fun NovelDetailScreen(
     var chapterToDelete by remember { mutableStateOf<NovelChapter?>(null) }
     var showOutlineDialog by remember { mutableStateOf(false) }
     var chapterForOutline by remember { mutableStateOf<NovelChapter?>(null) }
+    var showClearContentDialog by remember { mutableStateOf(false) }
+    var chapterToClear by remember { mutableStateOf<NovelChapter?>(null) }
 
     Scaffold(
         topBar = {
@@ -206,6 +209,10 @@ fun NovelDetailScreen(
                             onEditOutline = {
                                 chapterForOutline = chapter
                                 showOutlineDialog = true
+                            },
+                            onClearContent = {
+                                chapterToClear = chapter
+                                showClearContentDialog = true
                             }
                         )
                     }
@@ -283,6 +290,39 @@ fun NovelDetailScreen(
             }
         )
     }
+
+    // 清空章节内容确认
+    if (showClearContentDialog && chapterToClear != null) {
+        AlertDialog(
+            onDismissRequest = { showClearContentDialog = false },
+            title = { Text(stringResource(R.string.novel_chapter_clear_content_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.novel_chapter_clear_content_message,
+                        chapterToClear!!.chapterNumber,
+                        chapterToClear!!.title
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearChapterContent(chapterToClear!!)
+                        showClearContentDialog = false
+                        chapterToClear = null
+                    }
+                ) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearContentDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -291,7 +331,8 @@ private fun ChapterItem(
     chapter: NovelChapter,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onEditOutline: () -> Unit
+    onEditOutline: () -> Unit,
+    onClearContent: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -336,6 +377,16 @@ private fun ChapterItem(
                     contentDescription = stringResource(R.string.novel_chapter_outline),
                     modifier = Modifier.height(20.dp)
                 )
+            }
+            if (chapter.content.isNotBlank()) {
+                IconButton(onClick = onClearContent) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.novel_chapter_clear_content_title),
+                        modifier = Modifier.height(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
