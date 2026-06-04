@@ -6,7 +6,8 @@ data class LlmConfig(
     val apiType: ApiType,
     val baseUrl: String,
     val apiKey: String,
-    val model: String
+    val model: String,
+    val customParams: String? = null
 )
 
 enum class ApiType {

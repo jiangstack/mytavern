@@ -7,7 +7,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -93,11 +97,12 @@ class LlmService(
                         tools = tools?.takeIf { activeConfig.apiType != ApiType.ANTHROPIC },
                         tool_choice = if (tools != null && activeConfig.apiType != ApiType.ANTHROPIC) "auto" else null
                     )
-                    Log.d("LlmService", "非流式发送给 LLM 的请求: ${json.encodeToString(ChatCompletionRequest.serializer(), request)}")
+                    val mergedRequest = json.mergeCustomParams(request, ChatCompletionRequest.serializer(), activeConfig.customParams)
+                    Log.d("LlmService", "非流式发送给 LLM 的请求: $mergedRequest")
                     val result = llmApiService.chatCompletion(
                         url = activeConfig.baseUrl,
                         authorization = activeConfig.apiKey.takeIf { it.isNotBlank() }?.let { "Bearer $it" },
-                        request = request
+                        request = mergedRequest
                     )
                     Log.d("LlmService", "非流式 LLM 响应: $result")
                     result.choices?.firstOrNull()?.message?.content
@@ -117,11 +122,12 @@ class LlmService(
                         temperature = temperature,
                         system = systemPrompt
                     )
-                    Log.d("LlmService", "Anthropic 发送给 LLM 的请求: ${json.encodeToString(AnthropicRequest.serializer(), request)}")
+                    val mergedRequest = json.mergeCustomParams(request, AnthropicRequest.serializer(), activeConfig.customParams)
+                    Log.d("LlmService", "Anthropic 发送给 LLM 的请求: $mergedRequest")
                     val result = llmApiService.chatCompletionAnthropic(
                         url = activeConfig.baseUrl,
                         apiKey = activeConfig.apiKey.takeIf { it.isNotBlank() },
-                        request = request
+                        request = mergedRequest
                     )
                     Log.d("LlmService", "Anthropic LLM 响应: $result")
                     result.content?.firstOrNull()?.text
@@ -170,10 +176,8 @@ class LlmService(
                     tools = tools?.takeIf { activeConfig.apiType != ApiType.ANTHROPIC },
                     tool_choice = if (tools != null && activeConfig.apiType != ApiType.ANTHROPIC) "auto" else null
                 )
-                val requestBodyString = json.encodeToString(
-                    ChatCompletionRequest.serializer(),
-                    chatRequest
-                )
+                val mergedRequest = json.mergeCustomParams(chatRequest, ChatCompletionRequest.serializer(), activeConfig.customParams)
+                val requestBodyString = mergedRequest.toString()
                 Log.d("LlmService", "发送给 LLM 的请求: $requestBodyString")
                 val requestBody = requestBodyString.toRequestBody("application/json".toMediaType())
 
@@ -280,6 +284,17 @@ class LlmService(
             return message.content
         }
         return "$prefix：${message.content}"
+    }
+
+    private fun <T> Json.mergeCustomParams(
+        request: T,
+        serializer: KSerializer<T>,
+        customParams: String?
+    ): JsonObject {
+        val base = encodeToJsonElement(serializer, request).jsonObject
+        if (customParams.isNullOrBlank()) return base
+        val custom = parseToJsonElement(customParams).jsonObject
+        return JsonObject(base.toMutableMap().apply { putAll(custom) })
     }
 
     private suspend fun getDefaultConfig(): LlmConfig? {

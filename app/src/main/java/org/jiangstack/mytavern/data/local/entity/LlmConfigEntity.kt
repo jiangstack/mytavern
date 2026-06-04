@@ -11,5 +11,6 @@ data class LlmConfigEntity(
     val apiType: String,
     val baseUrl: String,
     val apiKey: String,
-    val model: String
+    val model: String,
+    val customParams: String? = null
 )

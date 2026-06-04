@@ -40,7 +40,8 @@ class LlmConfigRepositoryImpl(
         apiType = ApiType.valueOf(apiType),
         baseUrl = baseUrl,
         apiKey = apiKey,
-        model = model
+        model = model,
+        customParams = customParams
     )
 
     private fun LlmConfig.toEntity() = LlmConfigEntity(
@@ -49,6 +50,7 @@ class LlmConfigRepositoryImpl(
         apiType = apiType.name,
         baseUrl = baseUrl,
         apiKey = apiKey,
-        model = model
+        model = model,
+        customParams = customParams
     )
 }

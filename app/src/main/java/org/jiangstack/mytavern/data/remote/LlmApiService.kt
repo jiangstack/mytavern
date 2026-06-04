@@ -1,5 +1,6 @@
 package org.jiangstack.mytavern.data.remote
 
+import kotlinx.serialization.json.JsonObject
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -14,7 +15,7 @@ interface LlmApiService {
         @Url url: String,
         @Header("Authorization") authorization: String? = null,
         @Header("Content-Type") contentType: String = "application/json",
-        @Body request: ChatCompletionRequest
+        @Body request: JsonObject
     ): ChatCompletionResponse
 
     @Streaming
@@ -32,7 +33,7 @@ interface LlmApiService {
         @Header("x-api-key") apiKey: String? = null,
         @Header("anthropic-version") version: String = "2023-06-01",
         @Header("Content-Type") contentType: String = "application/json",
-        @Body request: AnthropicRequest
+        @Body request: JsonObject
     ): AnthropicResponse
 }
 

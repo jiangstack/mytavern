@@ -85,6 +85,9 @@
     <string name="llm_config_set_default">设为默认</string>
     <string name="llm_config_copy">复制</string>
     <string name="llm_config_copy_suffix">（副本）</string>
+    <string name="llm_config_custom_params">自定义参数（JSON）</string>
+    <string name="llm_config_custom_params_invalid">请输入有效的 JSON 对象</string>
+    <string name="llm_config_custom_params_hint">例如：{\"top_p\": 0.9, \"frequency_penalty\": 0.5}</string>
 
     <!-- Chat -->
     <string name="chat_create_title">创建聊天</string>

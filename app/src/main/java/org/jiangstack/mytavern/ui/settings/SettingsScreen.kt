@@ -533,10 +533,19 @@ private fun LlmConfigItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = config.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = config.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    if (!config.customParams.isNullOrBlank()) {
+                        Text(
+                            text = " ●",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${config.apiType.name} | ${config.model}",
@@ -580,6 +589,15 @@ private fun LlmConfigEditDialog(
     var baseUrl by remember { mutableStateOf(config?.baseUrl ?: "") }
     var apiKey by remember { mutableStateOf(config?.apiKey ?: "") }
     var model by remember { mutableStateOf(config?.model ?: "") }
+    var customParams by remember { mutableStateOf(config?.customParams ?: "") }
+    val isCustomParamsValid = customParams.isBlank() || run {
+        try {
+            kotlinx.serialization.json.Json.Default.parseToJsonElement(customParams)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     val apiTypes = listOf(ApiType.OPENAI)
     val selectedIndex = apiTypes.indexOf(apiType)
@@ -648,6 +666,22 @@ private fun LlmConfigEditDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = customParams,
+                    onValueChange = { customParams = it },
+                    label = { Text(stringResource(R.string.llm_config_custom_params)) },
+                    placeholder = { Text(stringResource(R.string.llm_config_custom_params_hint)) },
+                    isError = !isCustomParamsValid,
+                    supportingText = {
+                        if (!isCustomParamsValid) {
+                            Text(stringResource(R.string.llm_config_custom_params_invalid))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 6,
+                    minLines = 3
+                )
             }
         },
         confirmButton = {
@@ -660,11 +694,12 @@ private fun LlmConfigEditDialog(
                             apiType = apiType,
                             baseUrl = baseUrl,
                             apiKey = apiKey,
-                            model = model
+                            model = model,
+                            customParams = customParams.takeIf { it.isNotBlank() }
                         )
                     )
                 },
-                enabled = name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank()
+                enabled = name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank() && isCustomParamsValid
             ) {
                 Text(stringResource(R.string.save))
             }
