@@ -388,6 +388,20 @@ class NovelChapterEditViewModel(
                 }
             }
 
+            if (currentChapter != null && currentChapter.chapterNumber > 1) {
+                val previousChapter = allChapters.find { it.chapterNumber == currentChapter.chapterNumber - 1 }
+                if (previousChapter != null && previousChapter.content.isNotBlank()) {
+                    appendLine()
+                    appendLine("上一章正文（第${previousChapter.chapterNumber}章 ${previousChapter.title}）：")
+                    val prevTailContent = if (previousChapter.content.length > 2000) {
+                        "..." + previousChapter.content.takeLast(2000)
+                    } else {
+                        previousChapter.content
+                    }
+                    appendLine(prevTailContent)
+                }
+            }
+
             if (currentChapter != null) {
                 appendLine()
                 appendLine("当前章节：第${currentChapter.chapterNumber}章 ${currentChapter.title}")
