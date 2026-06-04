@@ -113,12 +113,12 @@ class NovelChapterEditViewModel(
     fun saveChapter() {
         viewModelScope.launch {
             val current = _chapter.value ?: return@launch
-            novelRepository.updateChapter(
-                current.copy(
-                    content = _editContent.value,
-                    updatedAt = System.currentTimeMillis()
-                )
+            val updated = current.copy(
+                content = _editContent.value,
+                updatedAt = System.currentTimeMillis()
             )
+            novelRepository.updateChapter(updated)
+            _chapter.value = updated
         }
     }
 
