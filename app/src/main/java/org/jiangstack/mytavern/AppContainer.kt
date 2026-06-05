@@ -72,6 +72,9 @@ class AppContainer(context: Context) {
     val novelRepository: NovelRepository =
         NovelRepositoryImpl(database.novelDao(), database.novelChapterDao(), database.novelCharacterDao())
 
+    val backupRepository: org.jiangstack.mytavern.data.repository.BackupRepository =
+        org.jiangstack.mytavern.data.repository.BackupRepository(context, database)
+
     val httpLogRepository: HttpLogRepository = HttpLogRepository()
 
     val okHttpClient: OkHttpClient by lazy {

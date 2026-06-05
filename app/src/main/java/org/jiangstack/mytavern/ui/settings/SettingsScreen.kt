@@ -1,5 +1,7 @@
 package org.jiangstack.mytavern.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +21,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -67,7 +72,8 @@ fun SettingsScreen(
             container.llmConfigRepository,
             container.characterRepository,
             container.userPreferencesRepository,
-            container.quickReplyRepository
+            container.quickReplyRepository,
+            container.backupRepository
         )
     )
 
@@ -80,6 +86,7 @@ fun SettingsScreen(
     val temperature by viewModel.temperature.collectAsState()
     val maxTokens by viewModel.maxTokens.collectAsState()
     val quickReplies by viewModel.quickReplies.collectAsState()
+    val backupState by viewModel.backupState.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
     var showLlmEditDialog by remember { mutableStateOf(false) }
@@ -90,6 +97,23 @@ fun SettingsScreen(
     var editingQuickReply by remember { mutableStateOf<QuickReply?>(null) }
     var showQuickReplyDeleteDialog by remember { mutableStateOf(false) }
     var quickReplyToDelete by remember { mutableStateOf<QuickReply?>(null) }
+    var showImportConfirmDialog by remember { mutableStateOf(false) }
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri?.let { viewModel.exportData(it) }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            pendingImportUri = it
+            showImportConfirmDialog = true
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -371,6 +395,81 @@ fun SettingsScreen(
 
             item {
                 Text(
+                    text = stringResource(R.string.settings_section_data),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    onClick = {
+                        val timestamp = java.text.SimpleDateFormat(
+                            "yyyyMMdd_HHmmss",
+                            java.util.Locale.getDefault()
+                        ).format(java.util.Date())
+                        exportLauncher.launch("mytavern_backup_$timestamp.zip")
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Upload,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_export_data),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    onClick = {
+                        importLauncher.launch(arrayOf("application/zip"))
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_import_data),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Text(
                     text = stringResource(R.string.settings_section_debug),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -503,6 +602,89 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+
+    if (showImportConfirmDialog && pendingImportUri != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showImportConfirmDialog = false
+                pendingImportUri = null
+            },
+            title = { Text(stringResource(R.string.settings_import_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_import_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.importData(pendingImportUri!!)
+                        showImportConfirmDialog = false
+                        pendingImportUri = null
+                    }
+                ) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showImportConfirmDialog = false
+                    pendingImportUri = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    when (val state = backupState) {
+        is BackupState.Exporting, is BackupState.Importing -> {
+            AlertDialog(
+                onDismissRequest = { },
+                title = {
+                    Text(
+                        if (state is BackupState.Exporting)
+                            stringResource(R.string.settings_export_data)
+                        else
+                            stringResource(R.string.settings_import_data)
+                    )
+                },
+                text = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            if (state is BackupState.Exporting) "正在导出…" else "正在导入…"
+                        )
+                    }
+                },
+                confirmButton = { }
+            )
+        }
+        is BackupState.Success -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetBackupState() },
+                title = { Text("完成") },
+                text = { Text(state.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.resetBackupState() }) {
+                        Text(stringResource(R.string.confirm))
+                    }
+                }
+            )
+        }
+        is BackupState.Error -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetBackupState() },
+                title = { Text("错误") },
+                text = { Text(state.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.resetBackupState() }) {
+                        Text(stringResource(R.string.confirm))
+                    }
+                }
+            )
+        }
+        else -> {}
     }
 }
 

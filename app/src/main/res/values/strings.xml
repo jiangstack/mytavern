@@ -166,6 +166,13 @@
     <string name="http_log_request">请求</string>
     <string name="http_log_response">响应</string>
 
+    <!-- Data Backup -->
+    <string name="settings_section_data">数据管理</string>
+    <string name="settings_export_data">导出备份</string>
+    <string name="settings_import_data">导入恢复</string>
+    <string name="settings_import_confirm_title">确认导入</string>
+    <string name="settings_import_confirm_message">导入将覆盖当前所有数据，确定继续吗？</string>
+
     <!-- Common -->
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>

@@ -1,13 +1,17 @@
 package org.jiangstack.mytavern.ui.settings
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.jiangstack.mytavern.data.repository.BackupRepository
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.CharacterType
 import org.jiangstack.mytavern.domain.model.LlmConfig
@@ -18,11 +22,20 @@ import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
 import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 
+sealed class BackupState {
+    data object Idle : BackupState()
+    data object Exporting : BackupState()
+    data object Importing : BackupState()
+    data class Success(val message: String) : BackupState()
+    data class Error(val message: String) : BackupState()
+}
+
 class SettingsViewModel(
     private val llmConfigRepository: LlmConfigRepository,
     private val characterRepository: CharacterRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val quickReplyRepository: QuickReplyRepository
+    private val quickReplyRepository: QuickReplyRepository,
+    private val backupRepository: BackupRepository
 ) : ViewModel() {
 
     val configs: StateFlow<List<LlmConfig>> = llmConfigRepository.getAllConfigs()
@@ -55,6 +68,9 @@ class SettingsViewModel(
 
     val quickReplies: StateFlow<List<QuickReply>> = quickReplyRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _backupState = MutableStateFlow<BackupState>(BackupState.Idle)
+    val backupState: StateFlow<BackupState> = _backupState.asStateFlow()
 
     fun setDefaultUserCharacter(id: Long?) {
         viewModelScope.launch {
@@ -132,12 +148,39 @@ class SettingsViewModel(
         }
     }
 
+    fun exportData(outputUri: Uri) {
+        viewModelScope.launch {
+            _backupState.value = BackupState.Exporting
+            val result = backupRepository.exportToZip(outputUri)
+            _backupState.value = result.fold(
+                onSuccess = { BackupState.Success(it) },
+                onFailure = { BackupState.Error(it.message ?: "导出失败") }
+            )
+        }
+    }
+
+    fun importData(zipUri: Uri) {
+        viewModelScope.launch {
+            _backupState.value = BackupState.Importing
+            val result = backupRepository.importFromZip(zipUri)
+            _backupState.value = result.fold(
+                onSuccess = { BackupState.Success(it) },
+                onFailure = { BackupState.Error(it.message ?: "导入失败") }
+            )
+        }
+    }
+
+    fun resetBackupState() {
+        _backupState.value = BackupState.Idle
+    }
+
     companion object {
         fun factory(
             llmConfigRepository: LlmConfigRepository,
             characterRepository: CharacterRepository,
             userPreferencesRepository: UserPreferencesRepository,
-            quickReplyRepository: QuickReplyRepository
+            quickReplyRepository: QuickReplyRepository,
+            backupRepository: BackupRepository
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -146,7 +189,8 @@ class SettingsViewModel(
                         llmConfigRepository,
                         characterRepository,
                         userPreferencesRepository,
-                        quickReplyRepository
+                        quickReplyRepository,
+                        backupRepository
                     ) as T
                 }
             }
