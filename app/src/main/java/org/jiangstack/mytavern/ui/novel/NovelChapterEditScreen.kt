@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
@@ -161,35 +162,51 @@ fun NovelChapterEditScreen(
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = {
-                            val selection = textFieldValue.selection
-                            viewModel.setAiModifyTargetRange(
-                                if (!selection.collapsed) selection.min..selection.max else null
+                    val isAnyAiRunning = isAiGenerating || isAiModifying || isSummarizingOutline
+                    if (isAnyAiRunning) {
+                        TextButton(
+                            onClick = { viewModel.cancelAiOperation() },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
                             )
-                            showAiModifyDialog = true
-                        },
-                        enabled = !isAiModifying && !isAiGenerating
-                    ) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.height(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.novel_ai_modify))
-                    }
-                    TextButton(
-                        onClick = { showAiDialog = true },
-                        enabled = !isAiGenerating && !isAiModifying
-                    ) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.height(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.novel_ai_continue))
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.height(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.novel_ai_stop))
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                val selection = textFieldValue.selection
+                                viewModel.setAiModifyTargetRange(
+                                    if (!selection.collapsed) selection.min..selection.max else null
+                                )
+                                showAiModifyDialog = true
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.height(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.novel_ai_modify))
+                        }
+                        TextButton(
+                            onClick = { showAiDialog = true }
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.height(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.novel_ai_continue))
+                        }
                     }
                 }
             )
@@ -340,6 +357,17 @@ fun NovelChapterEditScreen(
                             Text(stringResource(R.string.novel_ai_accept))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
+                        if (isAiGenerating) {
+                            OutlinedButton(
+                                onClick = { viewModel.cancelAiOperation() },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(stringResource(R.string.novel_ai_stop))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         OutlinedButton(
                             onClick = { viewModel.discardAiContent() },
                             enabled = !isAiGenerating
@@ -386,6 +414,17 @@ fun NovelChapterEditScreen(
                             Text(stringResource(R.string.novel_ai_accept))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
+                        if (isAiModifying) {
+                            OutlinedButton(
+                                onClick = { viewModel.cancelAiOperation() },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(stringResource(R.string.novel_ai_stop))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         OutlinedButton(
                             onClick = { viewModel.discardAiModify() },
                             enabled = !isAiModifying
@@ -398,7 +437,7 @@ fun NovelChapterEditScreen(
             }
 
             // AI 生成中指示器
-            if ((isAiGenerating || isAiModifying) && aiStreamingContent.isBlank() && aiModifyContent.isBlank()) {
+            if ((isAiGenerating || isAiModifying || isSummarizingOutline) && aiStreamingContent.isBlank() && aiModifyContent.isBlank() && outlineSummary.isBlank()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -412,6 +451,17 @@ fun NovelChapterEditScreen(
                             text = stringResource(R.string.novel_ai_generating),
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = { viewModel.cancelAiOperation() }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.novel_ai_stop),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.height(20.dp)
+                            )
+                        }
                     }
                 }
             }

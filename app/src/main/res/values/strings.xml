@@ -144,6 +144,7 @@
     <string name="novel_ai_continue_hint">可输入额外要求…</string>
     <string name="novel_ai_accept">采纳</string>
     <string name="novel_ai_discard">丢弃</string>
+    <string name="novel_ai_stop">停止</string>
     <string name="novel_ai_generating">AI 正在创作…</string>
 
     <!-- Quick Reply -->

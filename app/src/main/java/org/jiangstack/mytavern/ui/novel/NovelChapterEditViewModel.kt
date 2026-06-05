@@ -179,10 +179,12 @@ class NovelChapterEditViewModel(
         }
     }
 
-    fun cancelAiContinue() {
+    fun cancelAiOperation() {
         aiJob?.cancel()
         aiJob = null
         _isAiGenerating.value = false
+        _isAiModifying.value = false
+        _isSummarizingOutline.value = false
     }
 
     fun acceptAiContent() {
