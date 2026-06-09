@@ -2,7 +2,22 @@ package org.jiangstack.mytavern.domain.model
 
 object PromptBlockDefaults {
 
-    fun defaultContent(type: PromptBlockType, isContinue: Boolean = true): String? {
+    fun defaultContent(
+        type: PromptBlockType,
+        isContinue: Boolean = true,
+        isOutline: Boolean = false
+    ): String? {
+        if (isOutline) {
+            return when (type) {
+                PromptBlockType.SYSTEM_ROLE ->
+                    "你是一位小说编辑助手。请根据以下章节正文，总结出简洁的章节纲要。"
+
+                PromptBlockType.OUTPUT_INSTRUCTION ->
+                    "请用简洁的语言总结本章的主要情节、关键事件和转折点。直接输出纲要内容，不要加任何标题或解释。控制在200字以内。"
+
+                else -> null
+            }
+        }
         return when (type) {
             PromptBlockType.SYSTEM_ROLE ->
                 if (isContinue) "你是一位小说创作助手，请根据以下信息续写小说。"
@@ -43,5 +58,12 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.SELECTED_TEXT, true, 6),
         PromptBlockConfig(PromptBlockType.CUSTOM_REQUEST, true, 7),
         PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 8)
+    )
+
+    fun outlineBlocks(): List<PromptBlockConfig> = listOf(
+        PromptBlockConfig(PromptBlockType.SYSTEM_ROLE, true, 0),
+        PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 1),
+        PromptBlockConfig(PromptBlockType.CHAPTER_CONTENT, true, 2),
+        PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 3)
     )
 }

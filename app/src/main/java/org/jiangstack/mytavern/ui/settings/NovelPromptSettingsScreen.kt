@@ -59,15 +59,22 @@ fun NovelPromptSettingsScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val continueBlocks by viewModel.continueBlocks.collectAsState()
     val modifyBlocks by viewModel.modifyBlocks.collectAsState()
+    val outlineBlocks by viewModel.outlineBlocks.collectAsState()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingBlockIndex by remember { mutableStateOf(-1) }
     var editingContent by remember { mutableStateOf("") }
-    var isEditingContinue by remember { mutableStateOf(true) }
+    var editingTab by remember { mutableStateOf(0) }
 
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
-    val currentBlocks = if (selectedTab == 0) continueBlocks else modifyBlocks
+    val currentBlocks = when (selectedTab) {
+        0 -> continueBlocks
+        1 -> modifyBlocks
+        else -> outlineBlocks
+    }
+
+    val isOutline = selectedTab == 2
 
     Scaffold(
         topBar = {
@@ -104,6 +111,11 @@ fun NovelPromptSettingsScreen(
                     onClick = { selectedTab = 1 },
                     text = { Text("修改提示词") }
                 )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("纲要总结") }
+                )
             }
 
             LazyColumn(
@@ -113,27 +125,28 @@ fun NovelPromptSettingsScreen(
                     PromptBlockItem(
                         block = block,
                         isContinue = selectedTab == 0,
+                        isOutline = isOutline,
                         canMoveUp = index > 0,
                         canMoveDown = index < currentBlocks.size - 1,
                         onToggle = {
-                            if (selectedTab == 0) {
-                                viewModel.toggleContinueBlock(index)
-                            } else {
-                                viewModel.toggleModifyBlock(index)
+                            when (selectedTab) {
+                                0 -> viewModel.toggleContinueBlock(index)
+                                1 -> viewModel.toggleModifyBlock(index)
+                                else -> viewModel.toggleOutlineBlock(index)
                             }
                         },
                         onMoveUp = {
-                            if (selectedTab == 0) {
-                                viewModel.moveContinueBlockUp(index)
-                            } else {
-                                viewModel.moveModifyBlockUp(index)
+                            when (selectedTab) {
+                                0 -> viewModel.moveContinueBlockUp(index)
+                                1 -> viewModel.moveModifyBlockUp(index)
+                                else -> viewModel.moveOutlineBlockUp(index)
                             }
                         },
                         onMoveDown = {
-                            if (selectedTab == 0) {
-                                viewModel.moveContinueBlockDown(index)
-                            } else {
-                                viewModel.moveModifyBlockDown(index)
+                            when (selectedTab) {
+                                0 -> viewModel.moveContinueBlockDown(index)
+                                1 -> viewModel.moveModifyBlockDown(index)
+                                else -> viewModel.moveOutlineBlockDown(index)
                             }
                         },
                         onEdit = {
@@ -141,10 +154,11 @@ fun NovelPromptSettingsScreen(
                             editingContent = block.customContent
                                 ?: PromptBlockDefaults.defaultContent(
                                     block.type,
-                                    selectedTab == 0
+                                    isContinue = selectedTab == 0,
+                                    isOutline = isOutline
                                 )
                                 ?: ""
-                            isEditingContinue = selectedTab == 0
+                            editingTab = selectedTab
                             showEditDialog = true
                         }
                     )
@@ -170,10 +184,10 @@ fun NovelPromptSettingsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (isEditingContinue) {
-                            viewModel.updateContinueBlockContent(editingBlockIndex, editingContent)
-                        } else {
-                            viewModel.updateModifyBlockContent(editingBlockIndex, editingContent)
+                        when (editingTab) {
+                            0 -> viewModel.updateContinueBlockContent(editingBlockIndex, editingContent)
+                            1 -> viewModel.updateModifyBlockContent(editingBlockIndex, editingContent)
+                            else -> viewModel.updateOutlineBlockContent(editingBlockIndex, editingContent)
                         }
                         showEditDialog = false
                     }
@@ -197,10 +211,10 @@ fun NovelPromptSettingsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (selectedTab == 0) {
-                            viewModel.resetContinueBlocks()
-                        } else {
-                            viewModel.resetModifyBlocks()
+                        when (selectedTab) {
+                            0 -> viewModel.resetContinueBlocks()
+                            1 -> viewModel.resetModifyBlocks()
+                            else -> viewModel.resetOutlineBlocks()
                         }
                         showResetConfirmDialog = false
                     }
@@ -221,6 +235,7 @@ fun NovelPromptSettingsScreen(
 private fun PromptBlockItem(
     block: PromptBlockConfig,
     isContinue: Boolean,
+    isOutline: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onToggle: () -> Unit,
@@ -230,7 +245,7 @@ private fun PromptBlockItem(
 ) {
     val hasCustomContent = block.customContent != null
     val displayContent = block.customContent
-        ?: PromptBlockDefaults.defaultContent(block.type, isContinue)
+        ?: PromptBlockDefaults.defaultContent(block.type, isContinue, isOutline)
         ?: ""
 
     Card(

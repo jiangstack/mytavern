@@ -37,6 +37,7 @@ class UserPreferencesRepositoryImpl(
     private val maxTokensKey = intPreferencesKey("max_tokens")
     private val novelPromptBlocksKey = stringPreferencesKey("novel_prompt_blocks")
     private val novelModifyPromptBlocksKey = stringPreferencesKey("novel_modify_prompt_blocks")
+    private val novelOutlinePromptBlocksKey = stringPreferencesKey("novel_outline_prompt_blocks")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -155,6 +156,27 @@ class UserPreferencesRepositoryImpl(
     override suspend fun setNovelModifyPromptBlocks(blocks: List<PromptBlockConfig>) {
         context.dataStore.edit { preferences ->
             preferences[novelModifyPromptBlocksKey] =
+                json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
+        }
+    }
+
+    override val novelOutlinePromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
+        .map { preferences ->
+            val jsonStr = preferences[novelOutlinePromptBlocksKey]
+            if (jsonStr != null) {
+                try {
+                    json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
+                } catch (_: Exception) {
+                    PromptBlockDefaults.outlineBlocks()
+                }
+            } else {
+                PromptBlockDefaults.outlineBlocks()
+            }
+        }
+
+    override suspend fun setNovelOutlinePromptBlocks(blocks: List<PromptBlockConfig>) {
+        context.dataStore.edit { preferences ->
+            preferences[novelOutlinePromptBlocksKey] =
                 json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
         }
     }

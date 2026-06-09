@@ -13,6 +13,7 @@ enum class PromptBlockType(val displayName: String, val editable: Boolean) {
     CURRENT_CHAPTER("当前章节信息", false),
     EXISTING_CONTENT("已有正文", false),
     SELECTED_TEXT("待修改文本", false),
+    CHAPTER_CONTENT("章节正文", false),
     CUSTOM_REQUEST("用户附加要求", true),
     OUTPUT_INSTRUCTION("输出要求", true)
 }

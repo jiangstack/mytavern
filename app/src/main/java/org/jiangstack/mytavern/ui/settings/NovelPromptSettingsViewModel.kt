@@ -31,6 +31,14 @@ class NovelPromptSettingsViewModel(
                 PromptBlockDefaults.modifyBlocks()
             )
 
+    val outlineBlocks: StateFlow<List<PromptBlockConfig>> =
+        userPreferencesRepository.novelOutlinePromptBlocks
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                PromptBlockDefaults.outlineBlocks()
+            )
+
     // region Continue blocks
 
     fun toggleContinueBlock(index: Int) {
@@ -140,6 +148,63 @@ class NovelPromptSettingsViewModel(
     fun resetModifyBlocks() {
         viewModelScope.launch {
             userPreferencesRepository.setNovelModifyPromptBlocks(PromptBlockDefaults.modifyBlocks())
+        }
+    }
+
+    // endregion
+
+    // region Outline blocks
+
+    fun toggleOutlineBlock(index: Int) {
+        viewModelScope.launch {
+            val current = outlineBlocks.value.toMutableList()
+            if (index in current.indices) {
+                current[index] = current[index].copy(isEnabled = !current[index].isEnabled)
+                userPreferencesRepository.setNovelOutlinePromptBlocks(current)
+            }
+        }
+    }
+
+    fun moveOutlineBlockUp(index: Int) {
+        if (index <= 0) return
+        viewModelScope.launch {
+            val current = outlineBlocks.value.toMutableList()
+            val temp = current[index]
+            current[index] = current[index - 1]
+            current[index - 1] = temp
+            val updated = current.mapIndexed { i, block -> block.copy(sortOrder = i) }
+            userPreferencesRepository.setNovelOutlinePromptBlocks(updated)
+        }
+    }
+
+    fun moveOutlineBlockDown(index: Int) {
+        val currentList = outlineBlocks.value
+        if (index < 0 || index >= currentList.size - 1) return
+        viewModelScope.launch {
+            val current = currentList.toMutableList()
+            val temp = current[index]
+            current[index] = current[index + 1]
+            current[index + 1] = temp
+            val updated = current.mapIndexed { i, block -> block.copy(sortOrder = i) }
+            userPreferencesRepository.setNovelOutlinePromptBlocks(updated)
+        }
+    }
+
+    fun updateOutlineBlockContent(index: Int, content: String) {
+        viewModelScope.launch {
+            val current = outlineBlocks.value.toMutableList()
+            if (index in current.indices) {
+                current[index] = current[index].copy(
+                    customContent = content.trim().takeIf { it.isNotEmpty() }
+                )
+                userPreferencesRepository.setNovelOutlinePromptBlocks(current)
+            }
+        }
+    }
+
+    fun resetOutlineBlocks() {
+        viewModelScope.launch {
+            userPreferencesRepository.setNovelOutlinePromptBlocks(PromptBlockDefaults.outlineBlocks())
         }
     }
 

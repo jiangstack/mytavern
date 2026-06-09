@@ -218,22 +218,10 @@ class NovelChapterEditViewModel(
             _errorMessage.value = null
 
             try {
-                val chapter = _chapter.value
                 val temperature = userPreferencesRepository.temperature.first()
                 val maxTokens = userPreferencesRepository.maxTokens.first()
 
-                val systemPrompt = buildString {
-                    appendLine("你是一位小说编辑助手。请根据以下章节正文，总结出简洁的章节纲要。")
-                    appendLine()
-                    if (chapter != null) {
-                        appendLine("章节：第${chapter.chapterNumber}章 ${chapter.title}")
-                    }
-                    appendLine()
-                    appendLine("章节正文：")
-                    appendLine(content)
-                    appendLine()
-                    appendLine("请用简洁的语言总结本章的主要情节、关键事件和转折点。直接输出纲要内容，不要加任何标题或解释。控制在200字以内。")
-                }
+                val systemPrompt = buildOutlinePrompt()
 
                 val promptMessage = org.jiangstack.mytavern.domain.model.ChatMessage(
                     sessionId = 0,
@@ -377,7 +365,8 @@ class NovelChapterEditViewModel(
         block: PromptBlockConfig,
         customRequest: String,
         isContinue: Boolean,
-        selectedText: String = ""
+        selectedText: String = "",
+        isOutline: Boolean = false
     ): String {
         val novel = _novel.value
         val wb = _worldBook.value
@@ -389,7 +378,7 @@ class NovelChapterEditViewModel(
         // 可编辑分块：使用自定义内容或默认内容
         if (block.type.editable) {
             val content = block.customContent
-                ?: PromptBlockDefaults.defaultContent(block.type, isContinue)
+                ?: PromptBlockDefaults.defaultContent(block.type, isContinue, isOutline)
                 ?: ""
             return when (block.type) {
                 PromptBlockType.CUSTOM_REQUEST -> {
@@ -493,8 +482,27 @@ class NovelChapterEditViewModel(
                 }.trimEnd()
             }
 
+            PromptBlockType.CHAPTER_CONTENT -> {
+                if (currentContent.isBlank()) return ""
+                buildString {
+                    appendLine("章节正文：")
+                    appendLine(currentContent)
+                }.trimEnd()
+            }
+
             else -> ""
         }
+    }
+
+    private suspend fun buildOutlinePrompt(): String {
+        val blocks = userPreferencesRepository.novelOutlinePromptBlocks.first()
+            .filter { it.isEnabled }
+            .sortedBy { it.sortOrder }
+
+        return blocks.mapNotNull { block ->
+            val content = buildPromptBlockContent(block, customRequest = "", isContinue = false, isOutline = true)
+            content.takeIf { it.isNotBlank() }
+        }.joinToString("\n\n")
     }
 
     companion object {

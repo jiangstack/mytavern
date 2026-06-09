@@ -21,4 +21,6 @@ interface UserPreferencesRepository {
     suspend fun setNovelPromptBlocks(blocks: List<PromptBlockConfig>)
     val novelModifyPromptBlocks: Flow<List<PromptBlockConfig>>
     suspend fun setNovelModifyPromptBlocks(blocks: List<PromptBlockConfig>)
+    val novelOutlinePromptBlocks: Flow<List<PromptBlockConfig>>
+    suspend fun setNovelOutlinePromptBlocks(blocks: List<PromptBlockConfig>)
 }
