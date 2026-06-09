@@ -122,7 +122,14 @@ data class ChatCompletionStreamResponse(
 data class Usage(
     val prompt_tokens: Int? = null,
     val completion_tokens: Int? = null,
-    val total_tokens: Int? = null
+    val total_tokens: Int? = null,
+    val prompt_tokens_details: PromptTokensDetails? = null,
+    val cost: Double? = null
+)
+
+@kotlinx.serialization.Serializable
+data class PromptTokensDetails(
+    val cached_tokens: Int? = null
 )
 
 @kotlinx.serialization.Serializable

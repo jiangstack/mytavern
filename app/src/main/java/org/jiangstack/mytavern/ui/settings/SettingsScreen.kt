@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
@@ -58,7 +59,8 @@ fun SettingsScreen(
     onNavigateToChatSettings: () -> Unit = {},
     onNavigateToQuickReplySettings: () -> Unit = {},
     onNavigateToHttpLog: () -> Unit = {},
-    onNavigateToNovelPromptSettings: () -> Unit = {}
+    onNavigateToNovelPromptSettings: () -> Unit = {},
+    onNavigateToUsageStats: () -> Unit = {}
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: SettingsViewModel = viewModel(
@@ -406,6 +408,44 @@ fun SettingsScreen(
                         Column(modifier = Modifier.padding(start = 16.dp)) {
                             Text(
                                 text = stringResource(R.string.settings_import_data),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.settings_section_usage),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    onClick = onNavigateToUsageStats
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BarChart,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_section_usage),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }

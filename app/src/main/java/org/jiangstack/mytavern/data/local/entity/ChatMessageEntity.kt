@@ -28,5 +28,7 @@ data class ChatMessageEntity(
     val parentMessageId: Long? = null,
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
-    val totalTokens: Int? = null
+    val totalTokens: Int? = null,
+    val role: String? = null,
+    val messageType: String? = null
 )

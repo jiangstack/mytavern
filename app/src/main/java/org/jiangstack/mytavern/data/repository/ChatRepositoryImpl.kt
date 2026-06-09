@@ -73,6 +73,8 @@ class ChatRepositoryImpl(
         aiCharacterId = aiCharacterId,
         worldBookId = worldBookId,
         sessionStateEnabled = sessionStateEnabled,
+        novelId = novelId,
+        agentSystemPrompt = agentSystemPrompt,
         createdAt = createdAt
     )
 
@@ -85,6 +87,8 @@ class ChatRepositoryImpl(
         aiCharacterId = aiCharacterId,
         worldBookId = worldBookId,
         sessionStateEnabled = sessionStateEnabled,
+        novelId = novelId,
+        agentSystemPrompt = agentSystemPrompt,
         createdAt = createdAt
     )
 
@@ -98,7 +102,9 @@ class ChatRepositoryImpl(
         parentMessageId = parentMessageId,
         promptTokens = promptTokens,
         completionTokens = completionTokens,
-        totalTokens = totalTokens
+        totalTokens = totalTokens,
+        role = role,
+        messageType = messageType
     )
 
     private fun ChatMessage.toEntity() = ChatMessageEntity(
@@ -111,6 +117,8 @@ class ChatRepositoryImpl(
         parentMessageId = parentMessageId,
         promptTokens = promptTokens,
         completionTokens = completionTokens,
-        totalTokens = totalTokens
+        totalTokens = totalTokens,
+        role = role,
+        messageType = messageType
     )
 }

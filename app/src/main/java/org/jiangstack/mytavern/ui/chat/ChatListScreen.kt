@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,14 +28,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,13 +56,15 @@ import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ChatSession
+import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.SessionType
 import org.jiangstack.mytavern.domain.model.WorldBook
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
-    onNavigateToChat: (Long) -> Unit
+    onNavigateToChat: (Long) -> Unit,
+    onNavigateToAgentChat: (Long) -> Unit = onNavigateToChat
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: ChatListViewModel = viewModel(
@@ -64,6 +72,7 @@ fun ChatListScreen(
             container.chatRepository,
             container.characterRepository,
             container.worldBookRepository,
+            container.novelRepository,
             container.userPreferencesRepository,
             container.sessionCharacterRepository
         )
@@ -72,6 +81,7 @@ fun ChatListScreen(
     val sessions by viewModel.sessions.collectAsState()
     val aiCharacters by viewModel.aiCharacters.collectAsState()
     val worldBooks by viewModel.worldBooks.collectAsState()
+    val novels by viewModel.novels.collectAsState()
     val scope = rememberCoroutineScope()
 
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -114,7 +124,13 @@ fun ChatListScreen(
                     items(sessions, key = { it.id }) { session ->
                         ChatSessionItem(
                             session = session,
-                            onClick = { onNavigateToChat(session.id) },
+                            onClick = {
+                                if (session.type == SessionType.AGENT) {
+                                    onNavigateToAgentChat(session.id)
+                                } else {
+                                    onNavigateToChat(session.id)
+                                }
+                            },
                             onLongClick = {
                                 sessionToDelete = session
                                 showDeleteDialog = true
@@ -130,8 +146,9 @@ fun ChatListScreen(
         CreateChatDialog(
             aiCharacters = aiCharacters,
             worldBooks = worldBooks,
+            novels = novels,
             onDismiss = { showCreateDialog = false },
-            onConfirm = { selectedIds, title, worldBookId ->
+            onConfirmChat = { selectedIds, title, worldBookId ->
                 scope.launch {
                     val sessionId = if (selectedIds.size == 1) {
                         viewModel.createSession(selectedIds.first(), title, worldBookId)
@@ -140,6 +157,13 @@ fun ChatListScreen(
                     }
                     showCreateDialog = false
                     onNavigateToChat(sessionId)
+                }
+            },
+            onConfirmAgent = { novelId, title, systemPrompt ->
+                scope.launch {
+                    val sessionId = viewModel.createAgentSession(novelId, title, systemPrompt)
+                    showCreateDialog = false
+                    onNavigateToAgentChat(sessionId)
                 }
             }
         )
@@ -200,7 +224,7 @@ private fun ChatSessionItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Chat,
+                imageVector = if (session.type == SessionType.AGENT) Icons.Default.SmartToy else Icons.Default.Chat,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(end = 16.dp)
@@ -213,7 +237,11 @@ private fun ChatSessionItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (session.type == SessionType.SINGLE) "单聊" else "群聊",
+                    text = when (session.type) {
+                        SessionType.SINGLE -> "单聊"
+                        SessionType.GROUP -> "群聊"
+                        SessionType.AGENT -> "智能体"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -222,17 +250,22 @@ private fun ChatSessionItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateChatDialog(
     aiCharacters: List<Character>,
     worldBooks: List<WorldBook>,
+    novels: List<Novel>,
     onDismiss: () -> Unit,
-    onConfirm: (aiCharacterIds: List<Long>, title: String, worldBookId: Long?) -> Unit
+    onConfirmChat: (aiCharacterIds: List<Long>, title: String, worldBookId: Long?) -> Unit,
+    onConfirmAgent: (novelId: Long, title: String, systemPrompt: String?) -> Unit
 ) {
-    var isGroupChat by remember { mutableStateOf(false) }
+    var chatMode by remember { mutableIntStateOf(0) } // 0=单聊, 1=群聊, 2=智能体
     var selectedCharacterIds by remember { mutableStateOf(setOf<Long>()) }
     var selectedWorldBookId by remember { mutableStateOf<Long?>(null) }
+    var selectedNovelId by remember { mutableStateOf<Long?>(null) }
     var title by remember { mutableStateOf("") }
+    var agentSystemPrompt by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -243,125 +276,187 @@ private fun CreateChatDialog(
                     .heightIn(max = 480.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextButton(
+                    SegmentedButton(
+                        selected = chatMode == 0,
                         onClick = {
-                            isGroupChat = false
+                            chatMode = 0
                             selectedCharacterIds = emptySet()
-                        }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                     ) {
-                        Text(
-                            text = stringResource(R.string.chat_mode_single),
-                            color = if (!isGroupChat) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(stringResource(R.string.chat_mode_single))
                     }
-                    TextButton(
+                    SegmentedButton(
+                        selected = chatMode == 1,
                         onClick = {
-                            isGroupChat = true
+                            chatMode = 1
                             selectedCharacterIds = emptySet()
-                        }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                     ) {
-                        Text(
-                            text = stringResource(R.string.chat_mode_group),
-                            color = if (isGroupChat) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(stringResource(R.string.chat_mode_group))
+                    }
+                    SegmentedButton(
+                        selected = chatMode == 2,
+                        onClick = {
+                            chatMode = 2
+                            selectedCharacterIds = emptySet()
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                    ) {
+                        Text(stringResource(R.string.chat_mode_agent))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = if (isGroupChat) stringResource(R.string.chat_select_ai_characters)
-                    else stringResource(R.string.chat_select_ai_character),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (aiCharacters.isEmpty()) {
+                if (chatMode == 2) {
+                    // 智能体模式：选择小说
                     Text(
-                        text = "暂无 AI 角色，请先创建一个",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    aiCharacters.forEach { character ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) {
-                            if (isGroupChat) {
-                                androidx.compose.material3.Checkbox(
-                                    checked = character.id in selectedCharacterIds,
-                                    onCheckedChange = { checked ->
-                                        selectedCharacterIds = if (checked) {
-                                            selectedCharacterIds + character.id
-                                        } else {
-                                            selectedCharacterIds - character.id
-                                        }
-                                    }
-                                )
-                            } else {
-                                RadioButton(
-                                    selected = selectedCharacterIds.contains(character.id),
-                                    onClick = { selectedCharacterIds = setOf(character.id) }
-                                )
-                            }
-                            Text(
-                                text = character.name,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (worldBooks.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "选择世界书（可选）",
+                        text = stringResource(R.string.chat_select_novel),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    ) {
-                        RadioButton(
-                            selected = selectedWorldBookId == null,
-                            onClick = { selectedWorldBookId = null }
-                        )
+
+                    if (novels.isEmpty()) {
                         Text(
-                            text = "不使用世界书",
-                            modifier = Modifier.padding(start = 8.dp)
+                            text = stringResource(R.string.chat_no_novels),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
                         )
+                    } else {
+                        novels.forEach { novel ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedNovelId == novel.id,
+                                    onClick = {
+                                        selectedNovelId = novel.id
+                                        if (title.isBlank()) {
+                                            title = "小说助手 - ${novel.title}"
+                                        }
+                                    }
+                                )
+                                Text(
+                                    text = novel.title,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                        }
                     }
-                    worldBooks.forEach { worldBook ->
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.chat_agent_system_prompt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = agentSystemPrompt,
+                        onValueChange = { agentSystemPrompt = it },
+                        label = { Text(stringResource(R.string.chat_agent_system_prompt_hint)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        maxLines = 6
+                    )
+                } else {
+                    // 单聊/群聊模式：选择 AI 角色
+                    Text(
+                        text = if (chatMode == 1) stringResource(R.string.chat_select_ai_characters)
+                        else stringResource(R.string.chat_select_ai_character),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (aiCharacters.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.chat_no_ai_characters),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        aiCharacters.forEach { character ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                if (chatMode == 1) {
+                                    androidx.compose.material3.Checkbox(
+                                        checked = character.id in selectedCharacterIds,
+                                        onCheckedChange = { checked ->
+                                            selectedCharacterIds = if (checked) {
+                                                selectedCharacterIds + character.id
+                                            } else {
+                                                selectedCharacterIds - character.id
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    RadioButton(
+                                        selected = selectedCharacterIds.contains(character.id),
+                                        onClick = { selectedCharacterIds = setOf(character.id) }
+                                    )
+                                }
+                                Text(
+                                    text = character.name,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (worldBooks.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(R.string.chat_select_world_book),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = 4.dp)
                         ) {
                             RadioButton(
-                                selected = selectedWorldBookId == worldBook.id,
-                                onClick = { selectedWorldBookId = worldBook.id }
+                                selected = selectedWorldBookId == null,
+                                onClick = { selectedWorldBookId = null }
                             )
                             Text(
-                                text = worldBook.name,
+                                text = stringResource(R.string.chat_no_world_book),
                                 modifier = Modifier.padding(start = 8.dp)
                             )
+                        }
+                        worldBooks.forEach { worldBook ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedWorldBookId == worldBook.id,
+                                    onClick = { selectedWorldBookId = worldBook.id }
+                                )
+                                Text(
+                                    text = worldBook.name,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material3.OutlinedTextField(
+                OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("聊天标题") },
+                    label = { Text(stringResource(R.string.chat_title_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -370,15 +465,32 @@ private fun CreateChatDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (selectedCharacterIds.isNotEmpty()) {
-                        onConfirm(
-                            selectedCharacterIds.toList(),
-                            title.ifBlank { if (isGroupChat) "新群聊" else "新聊天" },
-                            selectedWorldBookId
-                        )
+                    when (chatMode) {
+                        0, 1 -> {
+                            if (selectedCharacterIds.isNotEmpty()) {
+                                onConfirmChat(
+                                    selectedCharacterIds.toList(),
+                                    title.ifBlank { if (chatMode == 1) "新群聊" else "新聊天" },
+                                    selectedWorldBookId
+                                )
+                            }
+                        }
+                        2 -> {
+                            selectedNovelId?.let { novelId ->
+                                onConfirmAgent(
+                                    novelId,
+                                    title.ifBlank { "小说助手" },
+                                    agentSystemPrompt.ifBlank { null }
+                                )
+                            }
+                        }
                     }
                 },
-                enabled = selectedCharacterIds.isNotEmpty()
+                enabled = when (chatMode) {
+                    0, 1 -> selectedCharacterIds.isNotEmpty()
+                    2 -> selectedNovelId != null
+                    else -> false
+                }
             ) {
                 Text(stringResource(R.string.confirm))
             }

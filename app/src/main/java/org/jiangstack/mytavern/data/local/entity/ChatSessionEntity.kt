@@ -14,5 +14,7 @@ data class ChatSessionEntity(
     val aiCharacterId: Long? = null,
     val worldBookId: Long? = null,
     val sessionStateEnabled: Boolean = false,
+    val novelId: Long? = null,
+    val agentSystemPrompt: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -149,7 +149,8 @@ class LlmService(
         temperature: Float? = null,
         maxTokens: Int? = null,
         tools: List<Tool>? = null,
-        userName: String? = null
+        userName: String? = null,
+        skipMessagePrefix: Boolean = false
     ): Flow<StreamChunk> = flow {
         val activeConfig = config ?: getDefaultConfig()
             ?: throw IllegalStateException("没有可用的 LLM 配置")
@@ -161,7 +162,7 @@ class LlmService(
                     messages.map {
                         Message(
                             role = it.role ?: if (it.senderId == null) "user" else "assistant",
-                            content = formatMessageContent(it, userName)
+                            content = formatMessageContent(it, userName, skipMessagePrefix)
                         )
                     }
                 )
@@ -218,7 +219,7 @@ class LlmService(
                                     ChatCompletionStreamResponse.serializer(),
                                     data
                                 )
-                                Log.d("LlmService", "LLM 收到数据块: $data")
+//                                Log.d("LlmService", "LLM 收到数据块: $data")
                                 val delta = streamResponse.choices?.firstOrNull()?.delta
                                 val content = delta?.content ?: ""
                                 val reasoning = delta?.reasoning_content ?: delta?.reasoning ?: ""
@@ -274,8 +275,14 @@ class LlmService(
         val arguments: StringBuilder = StringBuilder()
     )
 
-    private fun formatMessageContent(message: ChatMessage, userName: String? = null): String {
-        if (message.role == "system") return message.content
+    private fun formatMessageContent(message: ChatMessage, userName: String? = null, skipPrefix: Boolean = false): String {
+        // 系统消息、tool 消息、智能体相关消息不需要前缀
+        if (message.role == "system" || message.role == "tool") return message.content
+        if (message.messageType == "agent_thinking" || message.messageType == "tool_call" || message.messageType == "tool_result") {
+            return message.content
+        }
+        // 智能体模式跳过前缀
+        if (skipPrefix) return message.content
         val prefix = when {
             message.senderId == null -> userName ?: "用户"
             else -> message.senderName ?: "AI"

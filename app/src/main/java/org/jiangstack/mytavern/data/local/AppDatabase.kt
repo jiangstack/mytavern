@@ -42,7 +42,7 @@ import org.jiangstack.mytavern.data.local.entity.NovelCharacterEntity
         NovelChapterEntity::class,
         NovelCharacterEntity::class
     ],
-    version = 9,
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

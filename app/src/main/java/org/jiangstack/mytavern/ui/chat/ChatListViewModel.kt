@@ -10,8 +10,10 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.ChatSession
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.SessionType
+import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
+import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
@@ -20,6 +22,7 @@ class ChatListViewModel(
     private val chatRepository: ChatRepository,
     private val characterRepository: CharacterRepository,
     private val worldBookRepository: WorldBookRepository,
+    private val novelRepository: NovelRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val sessionCharacterRepository: SessionCharacterRepository
 ) : ViewModel() {
@@ -31,6 +34,9 @@ class ChatListViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val worldBooks: StateFlow<List<org.jiangstack.mytavern.domain.model.WorldBook>> = worldBookRepository.getAllWorldBooks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val novels: StateFlow<List<Novel>> = novelRepository.getAllNovels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     suspend fun createSession(aiCharacterId: Long, title: String, worldBookId: Long? = null): Long {
@@ -69,6 +75,20 @@ class ChatListViewModel(
         return sessionId
     }
 
+    suspend fun createAgentSession(
+        novelId: Long,
+        title: String,
+        agentSystemPrompt: String? = null
+    ): Long {
+        val session = ChatSession(
+            type = SessionType.AGENT,
+            title = title,
+            novelId = novelId,
+            agentSystemPrompt = agentSystemPrompt
+        )
+        return chatRepository.insertSession(session)
+    }
+
     fun deleteSession(session: ChatSession) {
         viewModelScope.launch {
             chatRepository.deleteMessagesBySessionId(session.id)
@@ -81,6 +101,7 @@ class ChatListViewModel(
             chatRepository: ChatRepository,
             characterRepository: CharacterRepository,
             worldBookRepository: WorldBookRepository,
+            novelRepository: NovelRepository,
             userPreferencesRepository: UserPreferencesRepository,
             sessionCharacterRepository: SessionCharacterRepository
         ): ViewModelProvider.Factory {
@@ -91,6 +112,7 @@ class ChatListViewModel(
                         chatRepository,
                         characterRepository,
                         worldBookRepository,
+                        novelRepository,
                         userPreferencesRepository,
                         sessionCharacterRepository
                     ) as T

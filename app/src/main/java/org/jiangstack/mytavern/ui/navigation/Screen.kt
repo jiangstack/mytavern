@@ -15,6 +15,9 @@ sealed class Screen(val route: String) {
     data object ChatDetail : Screen("chat_detail/{sessionId}") {
         fun createRoute(sessionId: Long) = "chat_detail/$sessionId"
     }
+    data object AgentChat : Screen("agent_chat/{sessionId}") {
+        fun createRoute(sessionId: Long) = "agent_chat/$sessionId"
+    }
 
     data object NovelList : Screen("novel_list")
     data object NovelDetail : Screen("novel_detail/{novelId}") {
@@ -29,5 +32,6 @@ sealed class Screen(val route: String) {
     data object ChatSettings : Screen("chat_settings")
     data object QuickReplySettings : Screen("quick_reply_settings")
     data object NovelPromptSettings : Screen("novel_prompt_settings")
+    data object UsageStats : Screen("usage_stats")
     data object HttpLog : Screen("http_log")
 }

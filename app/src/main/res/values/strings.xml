@@ -98,6 +98,15 @@
     <string name="chat_mention_hint">选择要@的角色</string>
     <string name="chat_mode_single">单聊</string>
     <string name="chat_mode_group">群聊</string>
+    <string name="chat_mode_agent">智能体</string>
+    <string name="chat_select_novel">选择小说</string>
+    <string name="chat_no_novels">暂无小说，请先创建一本</string>
+    <string name="chat_no_ai_characters">暂无 AI 角色，请先创建一个</string>
+    <string name="chat_agent_system_prompt">系统提示词（可选）</string>
+    <string name="chat_agent_system_prompt_hint">留空将使用默认模板</string>
+    <string name="chat_select_world_book">选择世界书（可选）</string>
+    <string name="chat_no_world_book">不使用世界书</string>
+    <string name="chat_title_label">聊天标题</string>
     <string name="chat_input_hint">输入消息...</string>
     <string name="chat_send">发送</string>
     <string name="chat_list_empty">暂无聊天记录，点击右下角开始新聊天</string>
@@ -157,6 +166,15 @@
     <string name="quick_reply_delete_message">确定要删除快捷回复「%1$s」吗？</string>
     <string name="quick_reply_list_empty">暂无快捷回复</string>
     <string name="quick_reply_add">添加</string>
+
+    <!-- Usage Stats -->
+    <string name="settings_section_usage">用量统计</string>
+    <string name="usage_stats_title">用量统计</string>
+    <string name="usage_stats_request_count">请求次数</string>
+    <string name="usage_stats_prompt_tokens">输入 Token</string>
+    <string name="usage_stats_cached_tokens">缓存 Token</string>
+    <string name="usage_stats_completion_tokens">输出 Token</string>
+    <string name="usage_stats_cost">花费</string>
 
     <!-- Debug -->
     <string name="settings_section_debug">调试</string>

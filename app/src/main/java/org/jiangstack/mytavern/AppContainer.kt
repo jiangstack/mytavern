@@ -16,6 +16,9 @@ import org.jiangstack.mytavern.data.local.MIGRATION_5_6
 import org.jiangstack.mytavern.data.local.MIGRATION_6_7
 import org.jiangstack.mytavern.data.local.MIGRATION_7_8
 import org.jiangstack.mytavern.data.local.MIGRATION_8_9
+import org.jiangstack.mytavern.data.local.MIGRATION_9_10
+import org.jiangstack.mytavern.data.local.MIGRATION_10_11
+import org.jiangstack.mytavern.data.local.MIGRATION_9_11
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
@@ -34,6 +37,7 @@ import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.service.LlmService
+import org.jiangstack.mytavern.domain.service.NovelAgentService
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -43,7 +47,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_9_11).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -100,5 +104,9 @@ class AppContainer(context: Context) {
 
     val llmService: LlmService by lazy {
         LlmService(llmApiService, llmConfigRepository, userPreferencesRepository, okHttpClient, json)
+    }
+
+    val novelAgentService: NovelAgentService by lazy {
+        NovelAgentService(llmService, novelRepository, json)
     }
 }

@@ -11,5 +11,6 @@ data class ChatMessage(
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
     val totalTokens: Int? = null,
-    val role: String? = null
+    val role: String? = null,
+    val messageType: String? = null
 )

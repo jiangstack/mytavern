@@ -22,6 +22,7 @@ import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
+import org.jiangstack.mytavern.domain.service.UsageStatsTracker
 
 class NovelChapterEditViewModel(
     private val novelRepository: NovelRepository,
@@ -159,6 +160,7 @@ class NovelChapterEditViewModel(
                 )
 
                 val fullContent = StringBuilder()
+                var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
 
                 llmService.sendChatMessageStream(
                     messages = listOf(promptMessage),
@@ -171,7 +173,12 @@ class NovelChapterEditViewModel(
                         fullContent.append(chunk.content)
                         _aiStreamingContent.value = fullContent.toString()
                     }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
                 }
+
+                finalUsage?.let { UsageStatsTracker.recordUsage(it) }
             } catch (e: CancellationException) {
                 // 用户取消
             } catch (e: Exception) {
@@ -230,6 +237,7 @@ class NovelChapterEditViewModel(
                 )
 
                 val fullContent = StringBuilder()
+                var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
 
                 llmService.sendChatMessageStream(
                     messages = listOf(promptMessage),
@@ -242,7 +250,12 @@ class NovelChapterEditViewModel(
                         fullContent.append(chunk.content)
                         _outlineSummary.value = fullContent.toString()
                     }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
                 }
+
+                finalUsage?.let { UsageStatsTracker.recordUsage(it) }
             } catch (e: CancellationException) {
                 // 用户取消
             } catch (e: Exception) {
@@ -285,6 +298,7 @@ class NovelChapterEditViewModel(
                 )
 
                 val fullContent = StringBuilder()
+                var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
 
                 llmService.sendChatMessageStream(
                     messages = listOf(promptMessage),
@@ -297,7 +311,12 @@ class NovelChapterEditViewModel(
                         fullContent.append(chunk.content)
                         _aiModifyContent.value = fullContent.toString()
                     }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
                 }
+
+                finalUsage?.let { UsageStatsTracker.recordUsage(it) }
             } catch (e: CancellationException) {
                 // 用户取消
             } catch (e: Exception) {

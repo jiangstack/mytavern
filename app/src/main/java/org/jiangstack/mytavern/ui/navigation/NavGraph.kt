@@ -11,10 +11,12 @@ import org.jiangstack.mytavern.ui.chat.ChatListScreen
 import org.jiangstack.mytavern.ui.settings.SettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 
+import org.jiangstack.mytavern.ui.chat.AgentChatScreen
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
 import org.jiangstack.mytavern.ui.settings.ChatSettingsScreen
 import org.jiangstack.mytavern.ui.settings.HttpLogScreen
 import org.jiangstack.mytavern.ui.settings.LlmSettingsScreen
+import org.jiangstack.mytavern.ui.settings.UsageStatsScreen
 import org.jiangstack.mytavern.ui.settings.NovelPromptSettingsScreen
 import org.jiangstack.mytavern.ui.settings.QuickReplySettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
@@ -60,6 +62,9 @@ fun NavGraph(
             ChatListScreen(
                 onNavigateToChat = { sessionId ->
                     navController.navigate(Screen.ChatDetail.createRoute(sessionId))
+                },
+                onNavigateToAgentChat = { sessionId ->
+                    navController.navigate(Screen.AgentChat.createRoute(sessionId))
                 }
             )
         }
@@ -67,6 +72,14 @@ fun NavGraph(
         composable(Screen.ChatDetail.route) { backStackEntry ->
             val sessionId = backStackEntry.arguments?.getString("sessionId")?.toLongOrNull() ?: 0L
             ChatDetailScreen(
+                sessionId = sessionId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AgentChat.route) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId")?.toLongOrNull() ?: 0L
+            AgentChatScreen(
                 sessionId = sessionId,
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -117,6 +130,9 @@ fun NavGraph(
                 },
                 onNavigateToNovelPromptSettings = {
                     navController.navigate(Screen.NovelPromptSettings.route)
+                },
+                onNavigateToUsageStats = {
+                    navController.navigate(Screen.UsageStats.route)
                 }
             )
         }
@@ -141,6 +157,12 @@ fun NavGraph(
 
         composable(Screen.NovelPromptSettings.route) {
             NovelPromptSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.UsageStats.route) {
+            UsageStatsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

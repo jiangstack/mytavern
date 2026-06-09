@@ -29,6 +29,7 @@ import org.jiangstack.mytavern.domain.repository.SessionStateRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
+import org.jiangstack.mytavern.domain.service.UsageStatsTracker
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ChatDetailViewModel(
@@ -222,6 +223,9 @@ class ChatDetailViewModel(
                 }
             }
 
+            // 记录用量统计
+            finalUsage?.let { UsageStatsTracker.recordUsage(it) }
+
             // 处理 tool calls（保存状态）
             collectedToolCalls?.let { handleToolCalls(it) }
 
@@ -250,6 +254,8 @@ class ChatDetailViewModel(
                         finalUsage = chunk.usage
                     }
                 }
+                // 记录第二次请求的用量
+                finalUsage?.let { UsageStatsTracker.recordUsage(it) }
             }
 
             val finalContent = buildString {
@@ -349,6 +355,9 @@ class ChatDetailViewModel(
                 ))
             }
 
+            // 记录用量统计
+            finalUsage?.let { UsageStatsTracker.recordUsage(it) }
+
             collectedToolCalls?.let { handleToolCalls(it) }
 
             if (fullContent.isEmpty() && collectedToolCalls != null) {
@@ -378,6 +387,8 @@ class ChatDetailViewModel(
                         reasoning = fullReasoning.toString()
                     ))
                 }
+                // 记录第二次请求的用量
+                finalUsage?.let { UsageStatsTracker.recordUsage(it) }
             }
 
             val finalContent = buildString {
@@ -488,6 +499,7 @@ class ChatDetailViewModel(
                     val fullContent = StringBuilder()
                     val fullReasoning = StringBuilder()
                     val enableThinking = _thinkingEnabled.value
+                    var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
                     llmService.sendChatMessageStream(
                         messages = messagesToSend,
                         systemPrompt = systemPrompt,
@@ -504,7 +516,13 @@ class ChatDetailViewModel(
                             fullContent.append(chunk.content)
                             _streamingContent.value = fullContent.toString()
                         }
+                        if (chunk.usage != null) {
+                            finalUsage = chunk.usage
+                        }
                     }
+
+                    // 记录用量统计
+                    finalUsage?.let { UsageStatsTracker.recordUsage(it) }
 
                     val finalContent = buildString {
                         if (enableThinking && fullReasoning.isNotEmpty()) {
