@@ -13,6 +13,9 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.NovelChapter
+import org.jiangstack.mytavern.domain.model.PromptBlockConfig
+import org.jiangstack.mytavern.domain.model.PromptBlockDefaults
+import org.jiangstack.mytavern.domain.model.PromptBlockType
 import org.jiangstack.mytavern.domain.model.WorldBook
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.NovelRepository
@@ -349,148 +352,148 @@ class NovelChapterEditViewModel(
     }
 
     private suspend fun buildNovelPrompt(customRequest: String): String {
-        val novel = _novel.value ?: return ""
+        val blocks = userPreferencesRepository.novelPromptBlocks.first()
+            .filter { it.isEnabled }
+            .sortedBy { it.sortOrder }
+
+        return blocks.mapNotNull { block ->
+            val content = buildPromptBlockContent(block, customRequest, isContinue = true)
+            content.takeIf { it.isNotBlank() }
+        }.joinToString("\n\n")
+    }
+
+    private suspend fun buildNovelModifyPrompt(selectedText: String, customRequest: String): String {
+        val blocks = userPreferencesRepository.novelModifyPromptBlocks.first()
+            .filter { it.isEnabled }
+            .sortedBy { it.sortOrder }
+
+        return blocks.mapNotNull { block ->
+            val content = buildPromptBlockContent(block, customRequest, isContinue = false, selectedText = selectedText)
+            content.takeIf { it.isNotBlank() }
+        }.joinToString("\n\n")
+    }
+
+    private fun buildPromptBlockContent(
+        block: PromptBlockConfig,
+        customRequest: String,
+        isContinue: Boolean,
+        selectedText: String = ""
+    ): String {
+        val novel = _novel.value
         val wb = _worldBook.value
         val chars = _characters.value
         val allChapters = _allChapters.value
         val currentChapter = _chapter.value
         val currentContent = _editContent.value
 
-        return buildString {
-            appendLine("你是一位小说创作助手，请根据以下信息续写小说。")
-            appendLine()
-            appendLine("小说名称：${novel.title}")
-            if (novel.description.isNotBlank()) {
-                appendLine("小说设定：${novel.description}")
-            }
-
-            if (wb != null) {
-                appendLine()
-                appendLine("世界书：${wb.name}")
-                appendLine(wb.description)
-                wb.rules.forEach { rule ->
-                    appendLine("- ${rule.name}: ${rule.description}")
+        // 可编辑分块：使用自定义内容或默认内容
+        if (block.type.editable) {
+            val content = block.customContent
+                ?: PromptBlockDefaults.defaultContent(block.type, isContinue)
+                ?: ""
+            return when (block.type) {
+                PromptBlockType.CUSTOM_REQUEST -> {
+                    if (customRequest.isNotBlank()) content.replace("{customRequest}", customRequest) else ""
                 }
+                else -> content
+            }
+        }
+
+        // 不可编辑分块：根据类型生成动态内容
+        return when (block.type) {
+            PromptBlockType.NOVEL_META -> {
+                if (novel == null) return ""
+                buildString {
+                    appendLine("小说名称：${novel.title}")
+                    if (novel.description.isNotBlank()) {
+                        appendLine("小说设定：${novel.description}")
+                    }
+                }.trimEnd()
             }
 
-            if (chars.isNotEmpty()) {
-                appendLine()
-                appendLine("参与角色：")
-                chars.forEach { char ->
-                    appendLine("- ${char.name}: ${char.description}")
-                }
+            PromptBlockType.WORLD_BOOK -> {
+                if (wb == null) return ""
+                buildString {
+                    appendLine("世界书：${wb.name}")
+                    appendLine(wb.description)
+                    wb.rules.forEach { rule ->
+                        appendLine("- ${rule.name}: ${rule.description}")
+                    }
+                }.trimEnd()
             }
 
-            if (allChapters.isNotEmpty()) {
-                appendLine()
-                appendLine("历史章节纲要：")
-                allChapters.forEach { ch ->
-                    val marker = if (ch.id == chapterId) "（当前章节）" else ""
-                    appendLine("第${ch.chapterNumber}章 ${ch.title}$marker: ${ch.outline.ifBlank { "（无纲要）" }}")
-                }
+            PromptBlockType.CHARACTERS -> {
+                if (chars.isEmpty()) return ""
+                buildString {
+                    appendLine("参与角色：")
+                    chars.forEach { char ->
+                        appendLine("- ${char.name}: ${char.description}")
+                    }
+                }.trimEnd()
             }
 
-            if (currentChapter != null && currentChapter.chapterNumber > 1) {
-                val previousChapter = allChapters.find { it.chapterNumber == currentChapter.chapterNumber - 1 }
-                if (previousChapter != null && previousChapter.content.isNotBlank()) {
-                    appendLine()
-                    appendLine("上一章正文（第${previousChapter.chapterNumber}章 ${previousChapter.title}）：")
-                    val prevTailContent = if (previousChapter.content.length > 2000) {
-                        "..." + previousChapter.content.takeLast(2000)
+            PromptBlockType.CHAPTER_OUTLINES -> {
+                if (allChapters.isEmpty()) return ""
+                buildString {
+                    if (isContinue) {
+                        appendLine("历史章节纲要：")
                     } else {
-                        previousChapter.content
+                        appendLine("章节纲要：")
+                    }
+                    allChapters.forEach { ch ->
+                        val marker = if (ch.id == chapterId) "（当前章节）" else ""
+                        appendLine("第${ch.chapterNumber}章 ${ch.title}$marker: ${ch.outline.ifBlank { "（无纲要）" }}")
+                    }
+                }.trimEnd()
+            }
+
+            PromptBlockType.PREVIOUS_CHAPTER -> {
+                if (currentChapter == null || currentChapter.chapterNumber <= 1) return ""
+                val prevChapter = allChapters.find { it.chapterNumber == currentChapter.chapterNumber - 1 }
+                if (prevChapter == null || prevChapter.content.isBlank()) return ""
+                buildString {
+                    appendLine("上一章正文（第${prevChapter.chapterNumber}章 ${prevChapter.title}）：")
+                    val prevTailContent = if (prevChapter.content.length > 2000) {
+                        "..." + prevChapter.content.takeLast(2000)
+                    } else {
+                        prevChapter.content
                     }
                     appendLine(prevTailContent)
-                }
+                }.trimEnd()
             }
 
-            if (currentChapter != null) {
-                appendLine()
-                appendLine("当前章节：第${currentChapter.chapterNumber}章 ${currentChapter.title}")
-                if (currentChapter.outline.isNotBlank()) {
-                    appendLine("当前章节纲要：${currentChapter.outline}")
-                }
+            PromptBlockType.CURRENT_CHAPTER -> {
+                if (currentChapter == null) return ""
+                buildString {
+                    appendLine("当前章节：第${currentChapter.chapterNumber}章 ${currentChapter.title}")
+                    if (currentChapter.outline.isNotBlank()) {
+                        appendLine("当前章节纲要：${currentChapter.outline}")
+                    }
+                }.trimEnd()
             }
 
-            if (currentContent.isNotBlank()) {
-                appendLine()
-                appendLine("已有正文（前文）：")
-                // 取最后 2000 字作为上下文
-                val tailContent = if (currentContent.length > 2000) {
-                    "..." + currentContent.takeLast(2000)
-                } else {
-                    currentContent
-                }
-                appendLine(tailContent)
+            PromptBlockType.EXISTING_CONTENT -> {
+                if (currentContent.isBlank()) return ""
+                buildString {
+                    appendLine("已有正文（前文）：")
+                    val tailContent = if (currentContent.length > 2000) {
+                        "..." + currentContent.takeLast(2000)
+                    } else {
+                        currentContent
+                    }
+                    appendLine(tailContent)
+                }.trimEnd()
             }
 
-            if (customRequest.isNotBlank()) {
-                appendLine()
-                appendLine("用户附加要求：$customRequest")
+            PromptBlockType.SELECTED_TEXT -> {
+                if (selectedText.isBlank()) return ""
+                buildString {
+                    appendLine("待修改的文本：")
+                    appendLine(selectedText)
+                }.trimEnd()
             }
 
-            appendLine()
-            appendLine("请续写小说正文，保持风格一致，承接前文情节。直接输出续写内容，不要重复前文，不要加任何解释或标题。")
-        }
-    }
-
-    private suspend fun buildNovelModifyPrompt(selectedText: String, customRequest: String): String {
-        val novel = _novel.value ?: return ""
-        val wb = _worldBook.value
-        val chars = _characters.value
-        val allChapters = _allChapters.value
-        val currentChapter = _chapter.value
-
-        return buildString {
-            appendLine("你是一位小说编辑助手，请根据用户的修改要求对指定文本进行修改。")
-            appendLine()
-            appendLine("小说名称：${novel.title}")
-            if (novel.description.isNotBlank()) {
-                appendLine("小说设定：${novel.description}")
-            }
-
-            if (wb != null) {
-                appendLine()
-                appendLine("世界书：${wb.name}")
-                appendLine(wb.description)
-                wb.rules.forEach { rule ->
-                    appendLine("- ${rule.name}: ${rule.description}")
-                }
-            }
-
-            if (chars.isNotEmpty()) {
-                appendLine()
-                appendLine("参与角色：")
-                chars.forEach { char ->
-                    appendLine("- ${char.name}: ${char.description}")
-                }
-            }
-
-            if (allChapters.isNotEmpty()) {
-                appendLine()
-                appendLine("章节纲要：")
-                allChapters.forEach { ch ->
-                    val marker = if (ch.id == chapterId) "（当前章节）" else ""
-                    appendLine("第${ch.chapterNumber}章 ${ch.title}$marker: ${ch.outline.ifBlank { "（无纲要）" }}")
-                }
-            }
-
-            if (currentChapter != null) {
-                appendLine()
-                appendLine("当前章节：第${currentChapter.chapterNumber}章 ${currentChapter.title}")
-            }
-
-            appendLine()
-            appendLine("待修改的文本：")
-            appendLine(selectedText)
-
-            if (customRequest.isNotBlank()) {
-                appendLine()
-                appendLine("用户修改要求：$customRequest")
-            }
-
-            appendLine()
-            appendLine("请根据修改要求对上述文本进行修改。保持与原文风格一致，保持上下文连贯。直接输出修改后的文本，不要加任何解释、标题或标记。")
+            else -> ""
         }
     }
 

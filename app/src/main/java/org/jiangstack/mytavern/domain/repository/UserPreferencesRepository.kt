@@ -1,6 +1,7 @@
 package org.jiangstack.mytavern.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import org.jiangstack.mytavern.domain.model.PromptBlockConfig
 import org.jiangstack.mytavern.domain.model.ThemeMode
 
 interface UserPreferencesRepository {
@@ -16,4 +17,8 @@ interface UserPreferencesRepository {
     suspend fun setTemperature(temp: Float)
     val maxTokens: Flow<Int>
     suspend fun setMaxTokens(value: Int)
+    val novelPromptBlocks: Flow<List<PromptBlockConfig>>
+    suspend fun setNovelPromptBlocks(blocks: List<PromptBlockConfig>)
+    val novelModifyPromptBlocks: Flow<List<PromptBlockConfig>>
+    suspend fun setNovelModifyPromptBlocks(blocks: List<PromptBlockConfig>)
 }

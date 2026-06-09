@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.BugReport
@@ -64,7 +65,8 @@ import org.jiangstack.mytavern.domain.model.ThemeMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateToHttpLog: () -> Unit = {}
+    onNavigateToHttpLog: () -> Unit = {},
+    onNavigateToNovelPromptSettings: () -> Unit = {}
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: SettingsViewModel = viewModel(
@@ -335,6 +337,44 @@ fun SettingsScreen(
                             valueRange = 256f..32768f,
                             steps = 31
                         )
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    text = "小说",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    onClick = onNavigateToNovelPromptSettings
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = "小说AI提示词设置",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
                 }
             }

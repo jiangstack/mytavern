@@ -13,6 +13,7 @@ import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
 import org.jiangstack.mytavern.ui.settings.HttpLogScreen
+import org.jiangstack.mytavern.ui.settings.NovelPromptSettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelListScreen
 import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
@@ -101,7 +102,16 @@ fun NavGraph(
             SettingsScreen(
                 onNavigateToHttpLog = {
                     navController.navigate(Screen.HttpLog.route)
+                },
+                onNavigateToNovelPromptSettings = {
+                    navController.navigate(Screen.NovelPromptSettings.route)
                 }
+            )
+        }
+
+        composable(Screen.NovelPromptSettings.route) {
+            NovelPromptSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

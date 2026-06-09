@@ -7,9 +7,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import org.jiangstack.mytavern.domain.model.PromptBlockConfig
+import org.jiangstack.mytavern.domain.model.PromptBlockDefaults
 import org.jiangstack.mytavern.domain.model.ThemeMode
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 
@@ -19,12 +24,19 @@ class UserPreferencesRepositoryImpl(
     private val context: Context
 ) : UserPreferencesRepository {
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val defaultUserCharacterIdKey = longPreferencesKey("default_user_character_id")
     private val defaultLlmConfigIdKey = longPreferencesKey("default_llm_config_id")
     private val themeModeKey = intPreferencesKey("theme_mode")
     private val chatHistoryCountKey = intPreferencesKey("chat_history_count")
     private val temperatureKey = floatPreferencesKey("temperature")
     private val maxTokensKey = intPreferencesKey("max_tokens")
+    private val novelPromptBlocksKey = stringPreferencesKey("novel_prompt_blocks")
+    private val novelModifyPromptBlocksKey = stringPreferencesKey("novel_modify_prompt_blocks")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -102,6 +114,48 @@ class UserPreferencesRepositoryImpl(
     override suspend fun setMaxTokens(value: Int) {
         context.dataStore.edit { preferences ->
             preferences[maxTokensKey] = value.coerceIn(256, 32768)
+        }
+    }
+
+    override val novelPromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
+        .map { preferences ->
+            val jsonStr = preferences[novelPromptBlocksKey]
+            if (jsonStr != null) {
+                try {
+                    json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
+                } catch (_: Exception) {
+                    PromptBlockDefaults.continueWritingBlocks()
+                }
+            } else {
+                PromptBlockDefaults.continueWritingBlocks()
+            }
+        }
+
+    override suspend fun setNovelPromptBlocks(blocks: List<PromptBlockConfig>) {
+        context.dataStore.edit { preferences ->
+            preferences[novelPromptBlocksKey] =
+                json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
+        }
+    }
+
+    override val novelModifyPromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
+        .map { preferences ->
+            val jsonStr = preferences[novelModifyPromptBlocksKey]
+            if (jsonStr != null) {
+                try {
+                    json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
+                } catch (_: Exception) {
+                    PromptBlockDefaults.modifyBlocks()
+                }
+            } else {
+                PromptBlockDefaults.modifyBlocks()
+            }
+        }
+
+    override suspend fun setNovelModifyPromptBlocks(blocks: List<PromptBlockConfig>) {
+        context.dataStore.edit { preferences ->
+            preferences[novelModifyPromptBlocksKey] =
+                json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
         }
     }
 }
