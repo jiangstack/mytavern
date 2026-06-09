@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -198,7 +199,21 @@ class LlmService(
                     if (!response.isSuccessful) {
                         val errorBody = response.body?.string() ?: ""
                         Log.e("LlmService", "LLM 请求失败: HTTP ${response.code}, 响应: $errorBody")
-                        throw java.io.IOException("HTTP ${response.code}")
+                        val errorMsg = when (response.code) {
+                            401 -> "API Key 无效或已过期"
+                            403 -> "访问被拒绝，请检查 API Key 权限"
+                            429 -> "请求过于频繁，请稍后再试"
+                            500, 502, 503 -> "服务器错误 (${response.code})，请稍后再试"
+                            else -> {
+                                // 尝试从 errorBody 中提取错误信息
+                                val detail = try {
+                                    val jsonObj = json.parseToJsonElement(errorBody).jsonObject
+                                    jsonObj["error"]?.jsonObject?.get("message")?.jsonPrimitive?.content
+                                } catch (_: Exception) { null }
+                                detail ?: "请求失败 (HTTP ${response.code})"
+                            }
+                        }
+                        throw java.io.IOException(errorMsg)
                     }
                     Log.d("LlmService", "LLM 开始返回流式响应")
                     val fullResponse = StringBuilder()
@@ -253,6 +268,12 @@ class LlmService(
 
                                 streamResponse.usage?.let { usage ->
                                     emit(StreamChunk(content = "", reasoningContent = "", usage = usage))
+                                }
+
+                                // 发送 finish_reason（如果非 null 且不是 tool_calls）
+                                val fr = streamResponse.choices?.firstOrNull()?.finish_reason
+                                if (fr != null && fr != "tool_calls") {
+                                    emit(StreamChunk(content = "", reasoningContent = "", finishReason = fr))
                                 }
                             } catch (_: Exception) {
                             }

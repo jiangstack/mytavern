@@ -39,6 +39,8 @@ class NovelAgentService(
 
     companion object {
         const val MAX_ITERATIONS = 10
+        private const val TOOL_HISTORY_TRUNCATE_LENGTH = 200
+        private val HEAVY_CONTENT_TOOLS = setOf("read_novel_chapter", "read_novel_outline")
 
         val readOutlineTool = Tool(
             function = ToolFunction(
@@ -103,28 +105,53 @@ class NovelAgentService(
             var toolCalls: List<ToolCall>? = null
             var finalUsage: org.jiangstack.mytavern.data.remote.Usage? = null
 
-            llmService.sendChatMessageStream(
-                messages = conversation,
-                systemPrompt = systemPrompt,
-                temperature = temperature,
-                maxTokens = maxTokens,
-                tools = agentTools,
-                thinkingEnabled = thinkingEnabled,
-                skipMessagePrefix = true
-            ).collect { chunk ->
-                if (chunk.reasoningContent.isNotBlank()) {
-                    emit(AgentEvent.Thinking(chunk.reasoningContent))
+            var lastFinishReason: String? = null
+            val messagesToSend = compressToolHistory(conversation)
+            try {
+                llmService.sendChatMessageStream(
+                    messages = messagesToSend,
+                    systemPrompt = systemPrompt,
+                    temperature = temperature,
+                    maxTokens = maxTokens,
+                    tools = agentTools,
+                    thinkingEnabled = thinkingEnabled,
+                    skipMessagePrefix = true
+                ).collect { chunk ->
+                    if (chunk.reasoningContent.isNotBlank()) {
+                        emit(AgentEvent.Thinking(chunk.reasoningContent))
+                    }
+                    if (chunk.content.isNotBlank()) {
+                        fullContent.append(chunk.content)
+                        emit(AgentEvent.TextDelta(chunk.content))
+                    }
+                    if (chunk.toolCalls != null) {
+                        toolCalls = chunk.toolCalls
+                    }
+                    if (chunk.usage != null) {
+                        finalUsage = chunk.usage
+                    }
+                    if (chunk.finishReason != null) {
+                        lastFinishReason = chunk.finishReason
+                    }
                 }
-                if (chunk.content.isNotBlank()) {
-                    fullContent.append(chunk.content)
-                    emit(AgentEvent.TextDelta(chunk.content))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val errorMsg = when (e) {
+                    is java.net.UnknownHostException -> "网络连接失败，请检查网络设置"
+                    is java.net.SocketTimeoutException -> "网络请求超时，请稍后再试"
+                    is java.io.IOException -> e.message ?: "网络请求失败"
+                    else -> e.message ?: "请求失败"
                 }
-                if (chunk.toolCalls != null) {
-                    toolCalls = chunk.toolCalls
-                }
-                if (chunk.usage != null) {
-                    finalUsage = chunk.usage
-                }
+                emit(AgentEvent.Error(errorMsg))
+                return@flow
+            }
+
+            // 检查 stop reason
+            if (lastFinishReason == "length") {
+                emit(AgentEvent.Error("已达到最大输出长度限制，回复被截断。已输出的内容已保留。"))
+            } else if (lastFinishReason == "content_filter") {
+                emit(AgentEvent.Error("内容触发了安全过滤，回复被中断。已输出的内容已保留。"))
             }
 
             finalUsage?.let { UsageStatsTracker.recordUsage(it) }
@@ -179,7 +206,8 @@ class NovelAgentService(
                 conversation.add(ChatMessage(
                     sessionId = 0,
                     content = result,
-                    role = "tool"
+                    role = "tool",
+                    messageType = tc.function.name
                 ))
             }
         }
@@ -279,5 +307,44 @@ class NovelAgentService(
             ))
         }
         return "ok"
+    }
+
+    /**
+     * 压缩历史 tool 消息：对 read_novel_chapter / read_novel_outline 的多次调用结果，
+     * 只保留最后一次的完整内容，之前的截断为前 N 字 + 提示。
+     * 这样可以大幅减少发送给 LLM 的 token 数量，同时保留最新上下文。
+     */
+    private fun compressToolHistory(conversation: List<ChatMessage>): List<ChatMessage> {
+        // 找出每种重内容工具的所有消息索引
+        val toolIndices = mutableMapOf<String, MutableList<Int>>()
+        conversation.forEachIndexed { index, msg ->
+            if (msg.role == "tool" && msg.messageType in HEAVY_CONTENT_TOOLS) {
+                toolIndices.getOrPut(msg.messageType!!) { mutableListOf() }.add(index)
+            }
+        }
+
+        // 没有重复调用的工具，无需压缩
+        val needsCompress = toolIndices.values.any { it.size > 1 }
+        if (!needsCompress) return conversation
+
+        // 收集需要截断的索引（每种工具只保留最后一个完整）
+        val truncateIndices = mutableSetOf<Int>()
+        for (indices in toolIndices.values) {
+            if (indices.size > 1) {
+                // 除了最后一个，其余都截断
+                truncateIndices.addAll(indices.dropLast(1))
+            }
+        }
+
+        return conversation.mapIndexed { index, msg ->
+            if (index in truncateIndices && msg.content.length > TOOL_HISTORY_TRUNCATE_LENGTH) {
+                msg.copy(
+                    content = msg.content.take(TOOL_HISTORY_TRUNCATE_LENGTH) +
+                            "\n\n[历史记录已截断，完整内容见最新一次读取]"
+                )
+            } else {
+                msg
+            }
+        }
     }
 }

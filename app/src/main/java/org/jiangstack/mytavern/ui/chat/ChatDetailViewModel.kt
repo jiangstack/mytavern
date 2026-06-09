@@ -417,7 +417,10 @@ class ChatDetailViewModel(
             _errorMessage.value = e.message ?: "请求失败"
         } finally {
             _activeGeneratingIds.value -= targetCharacter.id
-            _streamingStates.value = _streamingStates.value - targetCharacter.id
+            // 仅在无错误时清除流式状态，出错时保留已输出内容供用户查看
+            if (_errorMessage.value == null) {
+                _streamingStates.value = _streamingStates.value - targetCharacter.id
+            }
             groupChatJobs.remove(targetCharacter.id)
         }
     }

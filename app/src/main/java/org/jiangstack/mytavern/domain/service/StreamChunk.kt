@@ -7,5 +7,6 @@ data class StreamChunk(
     val content: String = "",
     val reasoningContent: String = "",
     val usage: Usage? = null,
-    val toolCalls: List<ToolCall>? = null
+    val toolCalls: List<ToolCall>? = null,
+    val finishReason: String? = null
 )

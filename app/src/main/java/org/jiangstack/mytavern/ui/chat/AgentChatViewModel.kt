@@ -134,6 +134,7 @@ class AgentChatViewModel(
                 ?: "你是一个小说创作助手。"
 
             _isLoading.value = true
+            var hasError = false
 
             try {
                 val steps = mutableListOf<AgentStep>()
@@ -237,6 +238,7 @@ class AgentChatViewModel(
                         }
                         is NovelAgentService.AgentEvent.Error -> {
                             flushThinking()
+                            hasError = true
                             _errorMessage.value = event.message
                         }
                     }
@@ -244,11 +246,14 @@ class AgentChatViewModel(
             } catch (e: CancellationException) {
                 // 用户取消
             } catch (e: Exception) {
+                hasError = true
                 _errorMessage.value = e.message ?: "智能体运行失败"
             } finally {
                 _isLoading.value = false
-                _streamingContent.value = ""
-                _streamingThinking.value = ""
+                if (!hasError) {
+                    _streamingContent.value = ""
+                    _streamingThinking.value = ""
+                }
             }
         }
     }
