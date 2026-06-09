@@ -12,8 +12,11 @@ import org.jiangstack.mytavern.ui.settings.SettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookListScreen
 
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
+import org.jiangstack.mytavern.ui.settings.ChatSettingsScreen
 import org.jiangstack.mytavern.ui.settings.HttpLogScreen
+import org.jiangstack.mytavern.ui.settings.LlmSettingsScreen
 import org.jiangstack.mytavern.ui.settings.NovelPromptSettingsScreen
+import org.jiangstack.mytavern.ui.settings.QuickReplySettingsScreen
 import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelListScreen
 import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
@@ -100,12 +103,39 @@ fun NavGraph(
 
         composable(Screen.Settings.route) {
             SettingsScreen(
+                onNavigateToLlmSettings = {
+                    navController.navigate(Screen.LlmSettings.route)
+                },
+                onNavigateToChatSettings = {
+                    navController.navigate(Screen.ChatSettings.route)
+                },
+                onNavigateToQuickReplySettings = {
+                    navController.navigate(Screen.QuickReplySettings.route)
+                },
                 onNavigateToHttpLog = {
                     navController.navigate(Screen.HttpLog.route)
                 },
                 onNavigateToNovelPromptSettings = {
                     navController.navigate(Screen.NovelPromptSettings.route)
                 }
+            )
+        }
+
+        composable(Screen.LlmSettings.route) {
+            LlmSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ChatSettings.route) {
+            ChatSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.QuickReplySettings.route) {
+            QuickReplySettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

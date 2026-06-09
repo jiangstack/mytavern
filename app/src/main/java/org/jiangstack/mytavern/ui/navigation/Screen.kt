@@ -25,6 +25,9 @@ sealed class Screen(val route: String) {
     }
 
     data object Settings : Screen("settings")
+    data object LlmSettings : Screen("llm_settings")
+    data object ChatSettings : Screen("chat_settings")
+    data object QuickReplySettings : Screen("quick_reply_settings")
     data object NovelPromptSettings : Screen("novel_prompt_settings")
     data object HttpLog : Screen("http_log")
 }
