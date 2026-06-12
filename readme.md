@@ -13,8 +13,6 @@
 
 - **🤖 多模型兼容**
   - 支持 OpenAI 格式兼容的 LLM API
-  - 支持 OpenAI Chat API / Responses API
-  - 支持 Anthropic Messages API
   - 可自定义 Base URL、API Key、模型名称与参数
 
 - **👤 角色管理**
