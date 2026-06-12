@@ -1,5 +1,9 @@
 package org.jiangstack.mytavern.ui.chat
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -63,6 +68,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.ChatMessage
@@ -98,6 +104,20 @@ fun AgentChatScreen(
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var showMenu by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            viewModel.updateBackgroundUri(it.toString())
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -162,6 +182,24 @@ fun AgentChatScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
+                                text = { Text("设置背景图片") },
+                                onClick = {
+                                    showMenu = false
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            )
+                            if (session?.backgroundUri != null) {
+                                DropdownMenuItem(
+                                    text = { Text("清除背景") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.updateBackgroundUri(null)
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
                                 text = { Text("清空消息") },
                                 onClick = {
                                     showMenu = false
@@ -175,20 +213,33 @@ fun AgentChatScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            session?.backgroundUri?.let { uri ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.2f
+                )
+            }
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                state = listState,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding)
             ) {
-                items(messages) { message ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(messages) { message ->
                     when (message.messageType) {
                         "agent_thinking" -> AgentStepBubble(
                             step = AgentStep(type = "thinking", content = message.content)
@@ -234,6 +285,7 @@ fun AgentChatScreen(
                     }
                 }
             }
+            }
 
             AgentInputBar(
                 inputText = inputText,
@@ -249,6 +301,7 @@ fun AgentChatScreen(
                 isLoading = isLoading,
                 enabled = pendingApproval == null
             )
+        }
         }
     }
 

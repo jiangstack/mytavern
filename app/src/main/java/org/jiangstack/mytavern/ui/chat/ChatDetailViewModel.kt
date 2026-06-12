@@ -480,6 +480,15 @@ class ChatDetailViewModel(
         }
     }
 
+    fun updateBackgroundUri(backgroundUri: String?) {
+        viewModelScope.launch {
+            val currentSession = _session.value ?: return@launch
+            val updatedSession = currentSession.copy(backgroundUri = backgroundUri)
+            chatRepository.updateSession(updatedSession)
+            _session.value = updatedSession
+        }
+    }
+
     fun regenerateMessage(message: ChatMessage) {
         if (message.senderId == null) return
         singleChatJob = viewModelScope.launch {

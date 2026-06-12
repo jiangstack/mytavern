@@ -279,6 +279,15 @@ class AgentChatViewModel(
         }
     }
 
+    fun updateBackgroundUri(backgroundUri: String?) {
+        viewModelScope.launch {
+            val currentSession = _session.value ?: return@launch
+            val updatedSession = currentSession.copy(backgroundUri = backgroundUri)
+            chatRepository.updateSession(updatedSession)
+            _session.value = updatedSession
+        }
+    }
+
     companion object {
         fun factory(
             chatRepository: ChatRepository,

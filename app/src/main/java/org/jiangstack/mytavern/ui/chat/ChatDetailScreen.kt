@@ -1,5 +1,9 @@
 package org.jiangstack.mytavern.ui.chat
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -134,6 +138,19 @@ fun ChatDetailScreen(
     var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
     var showStateDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            viewModel.updateBackgroundUri(it.toString())
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
@@ -196,22 +213,40 @@ fun ChatDetailScreen(
                             tint = if (sessionStateEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (worldBooks.isNotEmpty()) {
-                        IconButton(onClick = { showWorldBookMenu = true }) {
-                            Icon(
-                                Icons.Filled.MoreVert,
-                                contentDescription = "菜单"
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showWorldBookMenu,
-                            onDismissRequest = { showWorldBookMenu = false }
-                        ) {
+                    IconButton(onClick = { showWorldBookMenu = true }) {
+                        Icon(
+                            Icons.Filled.MoreVert,
+                            contentDescription = "菜单"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showWorldBookMenu,
+                        onDismissRequest = { showWorldBookMenu = false }
+                    ) {
+                        if (worldBooks.isNotEmpty()) {
                             DropdownMenuItem(
                                 text = { Text("设置世界书") },
                                 onClick = {
                                     showWorldBookMenu = false
                                     showWorldBookDialog = true
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("设置背景图片") },
+                            onClick = {
+                                showWorldBookMenu = false
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        )
+                        if (session?.backgroundUri != null) {
+                            DropdownMenuItem(
+                                text = { Text("清除背景") },
+                                onClick = {
+                                    showWorldBookMenu = false
+                                    viewModel.updateBackgroundUri(null)
                                 }
                             )
                         }
@@ -221,17 +256,27 @@ fun ChatDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .imePadding()
-        ) {
-            Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            session?.backgroundUri?.let { uri ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.2f
+                )
+            }
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .imePadding()
             ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
                 if (messages.isEmpty() && !hasStreaming) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -347,6 +392,7 @@ fun ChatDetailScreen(
                 groupCharacters = groupCharacters,
                 isGroupChat = session?.type == SessionType.GROUP
             )
+        }
         }
     }
 
