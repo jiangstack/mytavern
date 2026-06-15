@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -104,6 +106,7 @@ fun AgentChatScreen(
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var showMenu by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -146,7 +149,12 @@ fun AgentChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(session?.title ?: "智能体")
+                        Text(
+                            text = session?.title ?: "智能体",
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         if (isLoading) {
                             Text(
                                 text = "运行中... 第${currentIteration}轮",
@@ -204,6 +212,16 @@ fun AgentChatScreen(
                                 onClick = {
                                     showMenu = false
                                     showClearDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.agent_chat_edit_session)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    showEditDialog = true
                                 }
                             )
                         }
@@ -327,7 +345,72 @@ fun AgentChatScreen(
             }
         )
     }
+    session?.let { currentSession ->
+        if (showEditDialog) {
+            EditAgentSessionDialog(
+                initialTitle = currentSession.title,
+                initialSystemPrompt = currentSession.agentSystemPrompt,
+                onDismiss = { showEditDialog = false },
+                onConfirm = { title, systemPrompt ->
+                    viewModel.updateSession(title, systemPrompt)
+                    showEditDialog = false
+                }
+            )
+        }
+    }
+
 }
+@Composable
+private fun EditAgentSessionDialog(
+    initialTitle: String,
+    initialSystemPrompt: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, systemPrompt: String?) -> Unit
+) {
+    var title by remember { mutableStateOf(initialTitle) }
+    var systemPrompt by remember { mutableStateOf(initialSystemPrompt ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.agent_chat_edit_session)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.chat_title_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = systemPrompt,
+                    onValueChange = { systemPrompt = it },
+                    label = { Text(stringResource(R.string.chat_agent_system_prompt)) },
+                    placeholder = { Text(stringResource(R.string.chat_agent_system_prompt_hint)) },
+                    minLines = 3,
+                    maxLines = 6,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(title, systemPrompt) },
+                enabled = title.trim().isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
 
 @Composable
 private fun AgentMessageBubble(message: ChatMessage) {

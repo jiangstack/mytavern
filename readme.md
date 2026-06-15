@@ -50,9 +50,12 @@
 | 角色管理 | 群聊对话 | 世界书 |
 |:---:|:---:|:---:|
 | ![角色管理](./doc/juese.jpg) | ![群聊对话](./doc/qunliao.jpg) | ![世界书](./doc/shijieshu.jpg) |
-| 小说创作 | 设置页面 |
-|:---:|:---:|
-| ![小说创作](./doc/xiaoshuo.jpg) | ![设置页面](./doc/shezhi.jpg) |
+| 小说创作 | 设置页面 | 智能体 |
+|:---:|:---:|:---:|
+| ![小说创作](./doc/xiaoshuo.jpg) | ![设置页面](./doc/shezhi.jpg) | ![智能体](./doc/agent.jpg) |
+| AI 辅助 |
+|:---:|
+| ![AI 辅助](./doc/fuzhu.jpg) |
 ---
 
 ## 🛠 技术栈

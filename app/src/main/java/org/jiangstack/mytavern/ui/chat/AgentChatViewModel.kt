@@ -288,6 +288,19 @@ class AgentChatViewModel(
         }
     }
 
+    fun updateSession(title: String, systemPrompt: String?) {
+        viewModelScope.launch {
+            val currentSession = _session.value ?: return@launch
+            val updatedSession = currentSession.copy(
+                title = title.trim(),
+                agentSystemPrompt = systemPrompt?.trim()?.ifBlank { null }
+            )
+            chatRepository.updateSession(updatedSession)
+            _session.value = updatedSession
+        }
+    }
+
+
     companion object {
         fun factory(
             chatRepository: ChatRepository,

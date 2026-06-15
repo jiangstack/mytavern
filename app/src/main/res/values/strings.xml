@@ -113,6 +113,7 @@
     <string name="chat_delete_title">删除聊天</string>
     <string name="chat_delete_message">确定要删除聊天「%1$s」吗？</string>
     <string name="chat_new_chat">新聊天</string>
+    <string name="agent_chat_edit_session">编辑会话</string>
 
     <!-- Novel -->
     <string name="novel_list_title">小说</string>
