@@ -23,6 +23,7 @@ import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelListScreen
 import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelChapterEditScreen
+import org.jiangstack.mytavern.ui.novel.NovelCharacterItemsScreen
 
 @Composable
 fun NavGraph(
@@ -100,9 +101,21 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToChapterEdit = { novelId, chapterId ->
                     navController.navigate(Screen.NovelChapterEdit.createRoute(novelId, chapterId))
+                },
+                onNavigateToCharacterItems = {
+                    navController.navigate(Screen.NovelCharacterItems.createRoute(novelId))
                 }
             )
         }
+
+        composable(Screen.NovelCharacterItems.route) { backStackEntry ->
+            val novelId = backStackEntry.arguments?.getString("novelId")?.toLongOrNull() ?: 0L
+            NovelCharacterItemsScreen(
+                novelId = novelId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
 
         composable(Screen.NovelChapterEdit.route) { backStackEntry ->
             val novelId = backStackEntry.arguments?.getString("novelId")?.toLongOrNull() ?: 0L

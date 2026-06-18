@@ -18,6 +18,7 @@ import org.jiangstack.mytavern.data.local.MIGRATION_7_8
 import org.jiangstack.mytavern.data.local.MIGRATION_8_9
 import org.jiangstack.mytavern.data.local.MIGRATION_9_10
 import org.jiangstack.mytavern.data.local.MIGRATION_10_11
+import org.jiangstack.mytavern.data.local.MIGRATION_11_12
 import org.jiangstack.mytavern.data.local.MIGRATION_9_11
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
@@ -47,7 +48,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_9_11).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_9_11, MIGRATION_11_12).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -74,7 +75,7 @@ class AppContainer(context: Context) {
         org.jiangstack.mytavern.data.repository.SessionStateRepositoryImpl(database.sessionStateDao())
 
     val novelRepository: NovelRepository =
-        NovelRepositoryImpl(database.novelDao(), database.novelChapterDao(), database.novelCharacterDao())
+        NovelRepositoryImpl(database.novelDao(), database.novelChapterDao(), database.novelCharacterDao(), database.novelCharacterItemDao())
 
     val backupRepository: org.jiangstack.mytavern.data.repository.BackupRepository =
         org.jiangstack.mytavern.data.repository.BackupRepository(context, database)

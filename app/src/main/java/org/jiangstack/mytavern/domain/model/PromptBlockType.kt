@@ -8,6 +8,7 @@ enum class PromptBlockType(val displayName: String, val editable: Boolean) {
     NOVEL_META("小说元信息", false),
     WORLD_BOOK("世界书信息", false),
     CHARACTERS("角色信息", false),
+    CHARACTER_ITEMS("人物物品", false),
     CHAPTER_OUTLINES("章节纲要", false),
     PREVIOUS_CHAPTER("上一章正文", false),
     CURRENT_CHAPTER("当前章节信息", false),

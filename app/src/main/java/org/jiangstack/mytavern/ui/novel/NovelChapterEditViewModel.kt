@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.NovelChapter
+import org.jiangstack.mytavern.domain.model.NovelCharacterItem
 import org.jiangstack.mytavern.domain.model.PromptBlockConfig
 import org.jiangstack.mytavern.domain.model.PromptBlockDefaults
 import org.jiangstack.mytavern.domain.model.PromptBlockType
@@ -45,6 +46,8 @@ class NovelChapterEditViewModel(
 
     private val _characters = MutableStateFlow<List<Character>>(emptyList())
     val characters: StateFlow<List<Character>> = _characters
+    private val _characterItems = MutableStateFlow<List<NovelCharacterItem>>(emptyList())
+    val characterItems: StateFlow<List<NovelCharacterItem>> = _characterItems
 
     private val _allChapters = MutableStateFlow<List<NovelChapter>>(emptyList())
 
@@ -99,6 +102,8 @@ class NovelChapterEditViewModel(
                 characterRepository.getCharacterById(it)
             } ?: emptyList()
             _characters.value = chars
+
+            _characterItems.value = novelRepository.getCharacterItemsByNovelIdSync(novelId)
 
             _allChapters.value = novelRepository.getChaptersByNovelIdSync(novelId)
         }
@@ -390,6 +395,7 @@ class NovelChapterEditViewModel(
         val novel = _novel.value
         val wb = _worldBook.value
         val chars = _characters.value
+        val charItems = _characterItems.value
         val allChapters = _allChapters.value
         val currentChapter = _chapter.value
         val currentContent = _editContent.value
@@ -436,6 +442,26 @@ class NovelChapterEditViewModel(
                     appendLine("参与角色：")
                     chars.forEach { char ->
                         appendLine("- ${char.name}: ${char.description}")
+                    }
+                }.trimEnd()
+            }
+
+            PromptBlockType.CHARACTER_ITEMS -> {
+                if (chars.isEmpty() || charItems.isEmpty()) return ""
+                val itemsByCharacter = charItems.groupBy { it.characterId }
+                buildString {
+                    appendLine("人物特殊物品：")
+                    chars.forEach { char ->
+                        val items = itemsByCharacter[char.id].orEmpty()
+                        if (items.isEmpty()) return@forEach
+                        appendLine("- ${char.name}：")
+                        items.forEach { item ->
+                            if (item.description.isNotBlank()) {
+                                appendLine("  · ${item.name}：${item.description}")
+                            } else {
+                                appendLine("  · ${item.name}")
+                            }
+                        }
                     }
                 }.trimEnd()
             }

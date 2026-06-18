@@ -23,6 +23,9 @@ sealed class Screen(val route: String) {
     data object NovelDetail : Screen("novel_detail/{novelId}") {
         fun createRoute(novelId: Long) = "novel_detail/$novelId"
     }
+    data object NovelCharacterItems : Screen("novel_character_items/{novelId}") {
+        fun createRoute(novelId: Long) = "novel_character_items/$novelId"
+    }
     data object NovelChapterEdit : Screen("novel_chapter_edit/{novelId}/{chapterId}") {
         fun createRoute(novelId: Long, chapterId: Long) = "novel_chapter_edit/$novelId/$chapterId"
     }

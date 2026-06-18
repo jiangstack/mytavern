@@ -2,6 +2,7 @@ package org.jiangstack.mytavern.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import org.jiangstack.mytavern.domain.model.Novel
+import org.jiangstack.mytavern.domain.model.NovelCharacterItem
 import org.jiangstack.mytavern.domain.model.NovelChapter
 
 interface NovelRepository {
@@ -25,4 +26,12 @@ interface NovelRepository {
     fun getCharacterIdsByNovelId(novelId: Long): Flow<List<Long>>
     suspend fun getCharacterIdsByNovelIdSync(novelId: Long): List<Long>
     suspend fun setNovelCharacters(novelId: Long, characterIds: List<Long>)
+    // 角色物品
+    fun getCharacterItemsByNovelId(novelId: Long): Flow<List<NovelCharacterItem>>
+    suspend fun getCharacterItemsByNovelIdSync(novelId: Long): List<NovelCharacterItem>
+    suspend fun getCharacterItemsByNovelAndCharacterIdSync(novelId: Long, characterId: Long): List<NovelCharacterItem>
+    suspend fun insertCharacterItem(item: NovelCharacterItem): Long
+    suspend fun updateCharacterItem(item: NovelCharacterItem)
+    suspend fun deleteCharacterItem(item: NovelCharacterItem)
+    suspend fun deleteCharacterItemsByNovelId(novelId: Long)
 }

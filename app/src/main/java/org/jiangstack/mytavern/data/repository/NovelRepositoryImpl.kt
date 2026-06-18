@@ -3,19 +3,24 @@ package org.jiangstack.mytavern.data.repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.jiangstack.mytavern.data.local.dao.NovelChapterDao
+import kotlinx.coroutines.flow.mapLatest
+import org.jiangstack.mytavern.data.local.dao.NovelCharacterItemDao
 import org.jiangstack.mytavern.data.local.dao.NovelCharacterDao
 import org.jiangstack.mytavern.data.local.dao.NovelDao
 import org.jiangstack.mytavern.data.local.entity.NovelChapterEntity
+import org.jiangstack.mytavern.data.local.entity.NovelCharacterItemEntity
 import org.jiangstack.mytavern.data.local.entity.NovelCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.NovelEntity
 import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.NovelChapter
+import org.jiangstack.mytavern.domain.model.NovelCharacterItem
 import org.jiangstack.mytavern.domain.repository.NovelRepository
 
 class NovelRepositoryImpl(
     private val novelDao: NovelDao,
     private val novelChapterDao: NovelChapterDao,
-    private val novelCharacterDao: NovelCharacterDao
+    private val novelCharacterDao: NovelCharacterDao,
+    private val novelCharacterItemDao: NovelCharacterItemDao
 ) : NovelRepository {
 
     // ========== 小说 ==========
@@ -45,6 +50,7 @@ class NovelRepositoryImpl(
     }
 
     override suspend fun deleteNovel(novel: Novel) {
+        novelCharacterItemDao.deleteByNovelId(novel.id)
         novelDao.delete(novel.toEntity())
     }
 
@@ -97,6 +103,36 @@ class NovelRepositoryImpl(
         }
     }
 
+    // ========== 角色物品 ==========
+
+    override fun getCharacterItemsByNovelId(novelId: Long): Flow<List<NovelCharacterItem>> {
+        return novelCharacterItemDao.getByNovelId(novelId).map { list -> list.map { it.toDomain() } }
+    }
+
+    override suspend fun getCharacterItemsByNovelIdSync(novelId: Long): List<NovelCharacterItem> {
+        return novelCharacterItemDao.getByNovelIdSync(novelId).map { it.toDomain() }
+    }
+
+    override suspend fun getCharacterItemsByNovelAndCharacterIdSync(novelId: Long, characterId: Long): List<NovelCharacterItem> {
+        return novelCharacterItemDao.getByNovelAndCharacterIdSync(novelId, characterId).map { it.toDomain() }
+    }
+
+    override suspend fun insertCharacterItem(item: NovelCharacterItem): Long {
+        return novelCharacterItemDao.insert(item.toEntity())
+    }
+
+    override suspend fun updateCharacterItem(item: NovelCharacterItem) {
+        novelCharacterItemDao.update(item.toEntity().copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    override suspend fun deleteCharacterItem(item: NovelCharacterItem) {
+        novelCharacterItemDao.delete(item.toEntity())
+    }
+
+    override suspend fun deleteCharacterItemsByNovelId(novelId: Long) {
+        novelCharacterItemDao.deleteByNovelId(novelId)
+    }
+
     // ========== 映射 ==========
 
     private fun NovelEntity.toDomain() = Novel(
@@ -135,6 +171,26 @@ class NovelRepositoryImpl(
         title = title,
         outline = outline,
         content = content,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+
+    private fun NovelCharacterItemEntity.toDomain() = NovelCharacterItem(
+        id = id,
+        novelId = novelId,
+        characterId = characterId,
+        name = name,
+        description = description,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+
+    private fun NovelCharacterItem.toEntity() = NovelCharacterItemEntity(
+        id = id,
+        novelId = novelId,
+        characterId = characterId,
+        name = name,
+        description = description,
         createdAt = createdAt,
         updatedAt = updatedAt
     )

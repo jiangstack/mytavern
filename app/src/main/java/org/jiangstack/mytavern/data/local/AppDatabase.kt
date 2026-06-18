@@ -14,6 +14,7 @@ import org.jiangstack.mytavern.data.local.dao.SessionStateDao
 import org.jiangstack.mytavern.data.local.dao.NovelDao
 import org.jiangstack.mytavern.data.local.dao.NovelChapterDao
 import org.jiangstack.mytavern.data.local.dao.NovelCharacterDao
+import org.jiangstack.mytavern.data.local.dao.NovelCharacterItemDao
 import org.jiangstack.mytavern.data.local.entity.CharacterEntity
 import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 import org.jiangstack.mytavern.data.local.entity.ChatSessionEntity
@@ -26,6 +27,7 @@ import org.jiangstack.mytavern.data.local.entity.SessionStateEntity
 import org.jiangstack.mytavern.data.local.entity.NovelEntity
 import org.jiangstack.mytavern.data.local.entity.NovelChapterEntity
 import org.jiangstack.mytavern.data.local.entity.NovelCharacterEntity
+import org.jiangstack.mytavern.data.local.entity.NovelCharacterItemEntity
 
 @Database(
     entities = [
@@ -40,9 +42,10 @@ import org.jiangstack.mytavern.data.local.entity.NovelCharacterEntity
         QuickReplyEntity::class,
         NovelEntity::class,
         NovelChapterEntity::class,
-        NovelCharacterEntity::class
+        NovelCharacterEntity::class,
+        NovelCharacterItemEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -58,4 +61,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun novelDao(): NovelDao
     abstract fun novelChapterDao(): NovelChapterDao
     abstract fun novelCharacterDao(): NovelCharacterDao
+    abstract fun novelCharacterItemDao(): NovelCharacterItemDao
 }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
+import org.jiangstack.mytavern.domain.model.NovelCharacterItem
 import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.NovelChapter
 import org.jiangstack.mytavern.domain.model.WorldBook
@@ -46,6 +47,8 @@ class NovelDetailViewModel(
             emit(chars)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val characterItems: StateFlow<List<NovelCharacterItem>> = novelRepository.getCharacterItemsByNovelId(novelId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allWorldBooks: StateFlow<List<WorldBook>> = worldBookRepository.getAllWorldBooks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -111,6 +114,32 @@ class NovelDetailViewModel(
 
     private suspend fun refreshNovel() {
         _novel.value = novelRepository.getNovelById(novelId)
+    }
+
+    fun addCharacterItem(characterId: Long, name: String, description: String) {
+        viewModelScope.launch {
+            val item = NovelCharacterItem(
+                novelId = novelId,
+                characterId = characterId,
+                name = name.trim(),
+                description = description.trim()
+            )
+            novelRepository.insertCharacterItem(item)
+        }
+    }
+
+    fun updateCharacterItem(item: NovelCharacterItem) {
+        viewModelScope.launch {
+            novelRepository.updateCharacterItem(
+                item.copy(name = item.name.trim(), description = item.description.trim())
+            )
+        }
+    }
+
+    fun deleteCharacterItem(item: NovelCharacterItem) {
+        viewModelScope.launch {
+            novelRepository.deleteCharacterItem(item)
+        }
     }
 
     companion object {

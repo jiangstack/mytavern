@@ -16,6 +16,8 @@ import kotlinx.serialization.json.Json
 import org.jiangstack.mytavern.domain.model.PromptBlockConfig
 import org.jiangstack.mytavern.domain.model.PromptBlockDefaults
 import org.jiangstack.mytavern.domain.model.ThemeMode
+import org.jiangstack.mytavern.domain.model.PromptBlockType
+
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
@@ -29,6 +31,20 @@ class UserPreferencesRepositoryImpl(
         isLenient = true
     }
 
+
+    /**
+     * 合并已保存的分块配置与默认配置，确保新增的默认分块类型始终存在。
+     * 保留用户已有的自定义内容和顺序，仅补充缺失的分块。
+     */
+    private fun mergeBlocksWithDefaults(
+        saved: List<PromptBlockConfig>,
+        defaults: List<PromptBlockConfig>
+    ): List<PromptBlockConfig> {
+        val savedTypes = saved.map { it.type }.toSet()
+        val missingDefaults = defaults.filter { it.type !in savedTypes }
+        if (missingDefaults.isEmpty()) return saved
+        return saved + missingDefaults
+    }
     private val defaultUserCharacterIdKey = longPreferencesKey("default_user_character_id")
     private val defaultLlmConfigIdKey = longPreferencesKey("default_llm_config_id")
     private val themeModeKey = intPreferencesKey("theme_mode")
@@ -121,15 +137,17 @@ class UserPreferencesRepositoryImpl(
     override val novelPromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
         .map { preferences ->
             val jsonStr = preferences[novelPromptBlocksKey]
-            if (jsonStr != null) {
+            val defaults = PromptBlockDefaults.continueWritingBlocks()
+            val saved = if (jsonStr != null) {
                 try {
                     json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
                 } catch (_: Exception) {
-                    PromptBlockDefaults.continueWritingBlocks()
+                    defaults
                 }
             } else {
-                PromptBlockDefaults.continueWritingBlocks()
+                defaults
             }
+            mergeBlocksWithDefaults(saved, defaults)
         }
 
     override suspend fun setNovelPromptBlocks(blocks: List<PromptBlockConfig>) {
@@ -142,15 +160,17 @@ class UserPreferencesRepositoryImpl(
     override val novelModifyPromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
         .map { preferences ->
             val jsonStr = preferences[novelModifyPromptBlocksKey]
-            if (jsonStr != null) {
+            val defaults = PromptBlockDefaults.modifyBlocks()
+            val saved = if (jsonStr != null) {
                 try {
                     json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
                 } catch (_: Exception) {
-                    PromptBlockDefaults.modifyBlocks()
+                    defaults
                 }
             } else {
-                PromptBlockDefaults.modifyBlocks()
+                defaults
             }
+            mergeBlocksWithDefaults(saved, defaults)
         }
 
     override suspend fun setNovelModifyPromptBlocks(blocks: List<PromptBlockConfig>) {
@@ -163,15 +183,17 @@ class UserPreferencesRepositoryImpl(
     override val novelOutlinePromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
         .map { preferences ->
             val jsonStr = preferences[novelOutlinePromptBlocksKey]
-            if (jsonStr != null) {
+            val defaults = PromptBlockDefaults.outlineBlocks()
+            val saved = if (jsonStr != null) {
                 try {
                     json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
                 } catch (_: Exception) {
-                    PromptBlockDefaults.outlineBlocks()
+                    defaults
                 }
             } else {
-                PromptBlockDefaults.outlineBlocks()
+                defaults
             }
+            mergeBlocksWithDefaults(saved, defaults)
         }
 
     override suspend fun setNovelOutlinePromptBlocks(blocks: List<PromptBlockConfig>) {

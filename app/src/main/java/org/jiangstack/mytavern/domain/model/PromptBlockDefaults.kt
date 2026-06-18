@@ -40,12 +40,13 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.NOVEL_META, true, 1),
         PromptBlockConfig(PromptBlockType.WORLD_BOOK, true, 2),
         PromptBlockConfig(PromptBlockType.CHARACTERS, true, 3),
-        PromptBlockConfig(PromptBlockType.CHAPTER_OUTLINES, true, 4),
-        PromptBlockConfig(PromptBlockType.PREVIOUS_CHAPTER, true, 5),
-        PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 6),
-        PromptBlockConfig(PromptBlockType.EXISTING_CONTENT, true, 7),
-        PromptBlockConfig(PromptBlockType.CUSTOM_REQUEST, true, 8),
-        PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 9)
+        PromptBlockConfig(PromptBlockType.CHARACTER_ITEMS, true, 4),
+        PromptBlockConfig(PromptBlockType.CHAPTER_OUTLINES, true, 5),
+        PromptBlockConfig(PromptBlockType.PREVIOUS_CHAPTER, true, 6),
+        PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 7),
+        PromptBlockConfig(PromptBlockType.EXISTING_CONTENT, true, 8),
+        PromptBlockConfig(PromptBlockType.CUSTOM_REQUEST, true, 9),
+        PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 10)
     )
 
     fun modifyBlocks(): List<PromptBlockConfig> = listOf(
@@ -53,10 +54,10 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.NOVEL_META, true, 1),
         PromptBlockConfig(PromptBlockType.WORLD_BOOK, true, 2),
         PromptBlockConfig(PromptBlockType.CHARACTERS, true, 3),
-        PromptBlockConfig(PromptBlockType.CHAPTER_OUTLINES, true, 4),
-        PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 5),
-        PromptBlockConfig(PromptBlockType.SELECTED_TEXT, true, 6),
-        PromptBlockConfig(PromptBlockType.CUSTOM_REQUEST, true, 7),
+        PromptBlockConfig(PromptBlockType.CHARACTER_ITEMS, true, 4),
+        PromptBlockConfig(PromptBlockType.CHAPTER_OUTLINES, true, 5),
+        PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 6),
+        PromptBlockConfig(PromptBlockType.SELECTED_TEXT, true, 7),
         PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 8)
     )
 

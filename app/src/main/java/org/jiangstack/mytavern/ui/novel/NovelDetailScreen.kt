@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,7 +67,8 @@ import org.jiangstack.mytavern.domain.model.WorldBook
 fun NovelDetailScreen(
     novelId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToChapterEdit: (Long, Long) -> Unit
+    onNavigateToChapterEdit: (Long, Long) -> Unit,
+    onNavigateToCharacterItems: () -> Unit
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: NovelDetailViewModel = viewModel(
@@ -84,7 +86,6 @@ fun NovelDetailScreen(
     val characters by viewModel.characters.collectAsState()
     val allWorldBooks by viewModel.allWorldBooks.collectAsState()
     val allAiCharacters by viewModel.allAiCharacters.collectAsState()
-
     var showEditDialog by remember { mutableStateOf(false) }
     var showAddChapterDialog by remember { mutableStateOf(false) }
     var showDeleteChapterDialog by remember { mutableStateOf(false) }
@@ -104,6 +105,9 @@ fun NovelDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToCharacterItems) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.novel_character_items_title))
+                    }
                     IconButton(onClick = { showEditDialog = true }) {
                         Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.novel_edit_title))
                     }
@@ -174,6 +178,7 @@ fun NovelDetailScreen(
                     }
                 }
             }
+
 
             // 章节标题
             Text(
