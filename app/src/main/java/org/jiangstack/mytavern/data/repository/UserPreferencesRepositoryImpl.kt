@@ -55,6 +55,7 @@ class UserPreferencesRepositoryImpl(
     private val novelPromptBlocksKey = stringPreferencesKey("novel_prompt_blocks")
     private val novelModifyPromptBlocksKey = stringPreferencesKey("novel_modify_prompt_blocks")
     private val novelOutlinePromptBlocksKey = stringPreferencesKey("novel_outline_prompt_blocks")
+    private val interactivePromptBlocksKey = stringPreferencesKey("interactive_prompt_blocks")
     private val dialogueHighlightEnabledKey = booleanPreferencesKey("dialogue_highlight_enabled")
     private val dialogueHighlightColorKey = longPreferencesKey("dialogue_highlight_color")
 
@@ -198,10 +199,32 @@ class UserPreferencesRepositoryImpl(
             }
             mergeBlocksWithDefaults(saved, defaults)
         }
-
     override suspend fun setNovelOutlinePromptBlocks(blocks: List<PromptBlockConfig>) {
         context.dataStore.edit { preferences ->
             preferences[novelOutlinePromptBlocksKey] =
+                json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
+        }
+    }
+
+    override val interactivePromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
+        .map { preferences ->
+            val jsonStr = preferences[interactivePromptBlocksKey]
+            val defaults = PromptBlockDefaults.interactiveStoryBlocks()
+            val saved = if (jsonStr != null) {
+                try {
+                    json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
+                } catch (_: Exception) {
+                    defaults
+                }
+            } else {
+                defaults
+            }
+            mergeBlocksWithDefaults(saved, defaults)
+        }
+
+    override suspend fun setInteractivePromptBlocks(blocks: List<PromptBlockConfig>) {
+        context.dataStore.edit { preferences ->
+            preferences[interactivePromptBlocksKey] =
                 json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
         }
     }

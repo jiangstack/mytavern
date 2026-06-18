@@ -31,6 +31,12 @@ object PromptBlockDefaults {
                 if (isContinue) "请续写小说正文，保持风格一致，承接前文情节。直接输出续写内容，不要重复前文，不要加任何解释或标题。"
                 else "请根据修改要求对上述文本进行修改。保持与原文风格一致，保持上下文连贯。直接输出修改后的文本，不要加任何解释、标题或标记。"
 
+            PromptBlockType.INTERACTIVE_SYSTEM_ROLE ->
+                "你是一个互动故事的讲述者。"
+
+            PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION ->
+                "请继续推进故事。使用 function call 更新人物状态、人物物品、当前环境，并提供3-5个行动选项。故事内容直接输出，不要加标题或解释。"
+
             else -> null
         }
     }
@@ -66,5 +72,18 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.CURRENT_CHAPTER, true, 1),
         PromptBlockConfig(PromptBlockType.CHAPTER_CONTENT, true, 2),
         PromptBlockConfig(PromptBlockType.OUTPUT_INSTRUCTION, true, 3)
+    )
+
+    fun interactiveStoryBlocks(): List<PromptBlockConfig> = listOf(
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_SYSTEM_ROLE, true, 0),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_NARRATOR_STYLE, true, 1),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_PARTICIPATING_CHARACTERS, true, 2),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_PLAY_CHARACTER, true, 3),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_BACKGROUND, true, 4),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_MAIN_PLOT, true, 5),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_CONTENT, true, 6),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_CURRENT_STATE, true, 7),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_USER_CHOICE, true, 8),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION, true, 9)
     )
 }

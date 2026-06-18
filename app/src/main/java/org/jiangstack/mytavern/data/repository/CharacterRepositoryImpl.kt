@@ -32,6 +32,10 @@ class CharacterRepositoryImpl(
         return characterDao.getById(id)?.toDomain()
     }
 
+    override suspend fun getCharactersByIds(ids: List<Long>): List<Character> {
+        return characterDao.getByIds(ids).map { it.toDomain() }
+    }
+
     override suspend fun insertCharacter(character: Character): Long {
         return characterDao.insert(character.toEntity())
     }

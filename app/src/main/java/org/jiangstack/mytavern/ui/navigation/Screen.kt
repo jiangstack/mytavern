@@ -30,6 +30,15 @@ sealed class Screen(val route: String) {
         fun createRoute(novelId: Long, chapterId: Long) = "novel_chapter_edit/$novelId/$chapterId"
     }
 
+    data object InteractiveGameList : Screen("interactive_game_list")
+    data object InteractiveGameDetail : Screen("interactive_game_detail/{gameId}") {
+        fun createRoute(gameId: Long) = "interactive_game_detail/$gameId"
+    }
+    data object InteractiveGamePlay : Screen("interactive_game_play/{gameId}") {
+        fun createRoute(gameId: Long) = "interactive_game_play/$gameId"
+    }
+    data object InteractivePromptSettings : Screen("interactive_prompt_settings")
+
     data object Settings : Screen("settings")
     data object LlmSettings : Screen("llm_settings")
     data object ChatSettings : Screen("chat_settings")

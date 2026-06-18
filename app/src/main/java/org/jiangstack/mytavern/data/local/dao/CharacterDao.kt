@@ -17,6 +17,9 @@ interface CharacterDao {
     @Query("SELECT * FROM characters WHERE id = :id")
     suspend fun getById(id: Long): CharacterEntity?
 
+    @Query("SELECT * FROM characters WHERE id IN (:ids) ORDER BY id DESC")
+    suspend fun getByIds(ids: List<Long>): List<CharacterEntity>
+
     @Query("SELECT * FROM characters WHERE type = :type ORDER BY id DESC")
     fun getByType(type: String): Flow<List<CharacterEntity>>
 

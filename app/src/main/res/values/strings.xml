@@ -211,6 +211,45 @@
     <string name="settings_dialogue_highlight_color">高亮颜色</string>
     <string name="settings_dialogue_highlight_preview">「你好。」他说。</string>
 
+
+    <!-- Interactive Game -->
+    <string name="nav_interactive">互动</string>
+    <string name="interactive_list_title">互动故事</string>
+    <string name="interactive_list_empty">暂无互动故事，点击右下角创建</string>
+    <string name="interactive_create_title">创建互动故事</string>
+    <string name="interactive_edit_title">编辑互动故事</string>
+    <string name="interactive_game_title">故事标题</string>
+    <string name="interactive_narrator_style">讲述者风格</string>
+    <string name="interactive_story_background">故事背景</string>
+    <string name="interactive_story_main_plot">故事主线</string>
+    <string name="interactive_window_word_count">窗口字数</string>
+    <string name="interactive_play_character">扮演角色</string>
+    <string name="interactive_play_character_label">扮演：%1$s</string>
+    <string name="interactive_select_worldbook">选择世界书</string>
+    <string name="interactive_worldbook_none">不使用世界书</string>
+    <string name="interactive_select_characters">选择参与角色（可多选）</string>
+    <string name="interactive_delete_title">删除互动故事</string>
+    <string name="interactive_delete_message">确定要删除互动故事「%1$s」吗？所有消息将一并删除。</string>
+    <string name="interactive_action_options">选择行动</string>
+    <string name="interactive_custom_action_hint">输入自定义行动…</string>
+    <string name="interactive_send">发送</string>
+    <string name="interactive_stop">停止</string>
+    <string name="interactive_continue">继续讲述</string>
+    <string name="interactive_character_info">角色信息</string>
+    <string name="interactive_play_character_badge">（扮演角色）</string>
+    <string name="interactive_settings">游戏设置</string>
+    <string name="interactive_environment">当前环境</string>
+    <string name="interactive_character_status">人物状态</string>
+    <string name="interactive_character_items">人物物品</string>
+    <string name="interactive_story_word_count">字数：%1$d</string>
+    <string name="interactive_clear_story">清空故事内容</string>
+    <string name="interactive_clear_story_title">清空故事内容</string>
+    <string name="interactive_clear_story_message">确定要清空当前故事的所有内容吗？此操作不可撤销。</string>
+    <string name="interactive_clear">清空</string>
+    <string name="interactive_prompt_settings_title">提示词设置</string>
+    <string name="interactive_prompt_settings">提示词管理</string>
+    <string name="interactive_prompt_reset_confirm">确定要重置互动故事提示词配置为默认状态吗？此操作不可撤销。</string>
+
     <!-- Common -->
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>

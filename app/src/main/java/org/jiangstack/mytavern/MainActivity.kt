@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +55,7 @@ data class TopLevelRoute(val screen: Screen, val icon: ImageVector, val labelRes
 val topLevelRoutes = listOf(
     TopLevelRoute(Screen.ChatList, Icons.Default.Chat, R.string.nav_chat),
     TopLevelRoute(Screen.NovelList, Icons.Default.Create, R.string.nav_novel),
+    TopLevelRoute(Screen.InteractiveGameList, Icons.Default.SportsEsports, R.string.nav_interactive),
     TopLevelRoute(Screen.CharacterList, Icons.Default.Person, R.string.nav_character),
     TopLevelRoute(Screen.WorldBookList, Icons.Default.Book, R.string.nav_worldbook),
     TopLevelRoute(Screen.Settings, Icons.Default.Settings, R.string.nav_settings)

@@ -24,6 +24,10 @@ import org.jiangstack.mytavern.ui.novel.NovelListScreen
 import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelChapterEditScreen
 import org.jiangstack.mytavern.ui.novel.NovelCharacterItemsScreen
+import org.jiangstack.mytavern.ui.interactive.InteractiveGameListScreen
+import org.jiangstack.mytavern.ui.interactive.InteractiveGameEditScreen
+import org.jiangstack.mytavern.ui.interactive.InteractiveGamePlayScreen
+import org.jiangstack.mytavern.ui.interactive.InteractivePromptSettingsScreen
 
 @Composable
 fun NavGraph(
@@ -123,6 +127,43 @@ fun NavGraph(
             NovelChapterEditScreen(
                 novelId = novelId,
                 chapterId = chapterId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.InteractiveGameList.route) {
+            InteractiveGameListScreen(
+                onNavigateToDetail = { gameId ->
+                    navController.navigate(Screen.InteractiveGameDetail.createRoute(gameId))
+                },
+                onNavigateToPlay = { gameId ->
+                    navController.navigate(Screen.InteractiveGamePlay.createRoute(gameId))
+                }
+            )
+        }
+        composable(Screen.InteractiveGameDetail.route) { backStackEntry ->
+            val gameId = backStackEntry.arguments?.getString("gameId")?.toLongOrNull() ?: 0L
+            InteractiveGameEditScreen(
+                gameId = gameId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPromptSettings = {
+                    navController.navigate(Screen.InteractivePromptSettings.route)
+                }
+            )
+        }
+
+        composable(Screen.InteractiveGamePlay.route) { backStackEntry ->
+            val gameId = backStackEntry.arguments?.getString("gameId")?.toLongOrNull() ?: 0L
+            InteractiveGamePlayScreen(
+                gameId = gameId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { gameId ->
+                    navController.navigate(Screen.InteractiveGameDetail.createRoute(gameId))
+                }
+            )
+        }
+
+        composable(Screen.InteractivePromptSettings.route) {
+            InteractivePromptSettingsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
