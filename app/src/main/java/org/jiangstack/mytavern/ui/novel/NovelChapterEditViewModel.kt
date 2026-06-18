@@ -1,5 +1,9 @@
 package org.jiangstack.mytavern.ui.novel
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -7,8 +11,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.Novel
@@ -24,6 +30,23 @@ import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.service.LlmService
 import org.jiangstack.mytavern.domain.service.UsageStatsTracker
+
+fun buildDialogueAnnotatedString(text: String, dialogueColor: Color): androidx.compose.ui.text.AnnotatedString {
+    val regex = Regex("([\u300c\u300e\u201c\u2018])(.*?)([\u300d\u300f\u201d\u2019])")
+    return buildAnnotatedString {
+        var lastEnd = 0
+        for (match in regex.findAll(text)) {
+            append(text.substring(lastEnd, match.range.first))
+            withStyle(SpanStyle(color = dialogueColor)) {
+                append(match.value)
+            }
+            lastEnd = match.range.last + 1
+        }
+        if (lastEnd < text.length) {
+            append(text.substring(lastEnd))
+        }
+    }
+}
 
 class NovelChapterEditViewModel(
     private val novelRepository: NovelRepository,
@@ -81,6 +104,12 @@ class NovelChapterEditViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    val dialogueHighlightEnabled: StateFlow<Boolean> = userPreferencesRepository.dialogueHighlightEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val dialogueHighlightColor: StateFlow<Long> = userPreferencesRepository.dialogueHighlightColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF4FC3F7L)
 
     private var aiJob: Job? = null
     private var autoSaveJob: Job? = null

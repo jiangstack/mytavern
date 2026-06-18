@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -54,6 +55,8 @@ class UserPreferencesRepositoryImpl(
     private val novelPromptBlocksKey = stringPreferencesKey("novel_prompt_blocks")
     private val novelModifyPromptBlocksKey = stringPreferencesKey("novel_modify_prompt_blocks")
     private val novelOutlinePromptBlocksKey = stringPreferencesKey("novel_outline_prompt_blocks")
+    private val dialogueHighlightEnabledKey = booleanPreferencesKey("dialogue_highlight_enabled")
+    private val dialogueHighlightColorKey = longPreferencesKey("dialogue_highlight_color")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -200,6 +203,28 @@ class UserPreferencesRepositoryImpl(
         context.dataStore.edit { preferences ->
             preferences[novelOutlinePromptBlocksKey] =
                 json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
+        }
+    }
+
+    override val dialogueHighlightEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[dialogueHighlightEnabledKey] ?: true
+        }
+
+    override suspend fun setDialogueHighlightEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[dialogueHighlightEnabledKey] = enabled
+        }
+    }
+
+    override val dialogueHighlightColor: Flow<Long> = context.dataStore.data
+        .map { preferences ->
+            preferences[dialogueHighlightColorKey] ?: 0xFF4FC3F7L
+        }
+
+    override suspend fun setDialogueHighlightColor(color: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[dialogueHighlightColorKey] = color
         }
     }
 }

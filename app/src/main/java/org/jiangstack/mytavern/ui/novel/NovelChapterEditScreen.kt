@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -107,6 +108,8 @@ fun NovelChapterEditScreen(
     val aiModifyContent by viewModel.aiModifyContent.collectAsState()
     val isAiModifying by viewModel.isAiModifying.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
+    val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
 
     var outlineExpanded by remember { mutableStateOf(false) }
     var outlineText by remember { mutableStateOf("") }
@@ -577,48 +580,109 @@ fun NovelChapterEditScreen(
             CompositionLocalProvider(
                 LocalTextSelectionColors provides customSelectionColors
             ) {
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { newValue ->
-                        textFieldValue = newValue
-                        viewModel.updateContent(newValue.text)
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                        .onGloballyPositioned {
-                            // 查找底层 EditText 并禁用自动弹出键盘
-                            val editText = findEditText(rootView)
-                            editText?.showSoftInputOnFocus = false
-                        }
-                        .onFocusChanged { focusState ->
-                            isTextFieldFocused = focusState.isFocused
-                            if (!focusState.isFocused) {
-                                keyboardController?.hide()
+                if (dialogueHighlightEnabled) {
+                    // 覆盖层方案：透明 BasicTextField + 着色 Text
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        // 底层：着色 Text（对白部分用配置色，非对白部分用正文色）
+                        Text(
+                            text = buildDialogueAnnotatedString(editContent, Color(dialogueHighlightColor)),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                lineHeight = 26.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        // 上层：透明文字的 BasicTextField（只显示光标和选区）
+                        BasicTextField(
+                            value = textFieldValue,
+                            onValueChange = { newValue ->
+                                textFieldValue = newValue
+                                viewModel.updateContent(newValue.text)
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onGloballyPositioned {
+                                    val editText = findEditText(rootView)
+                                    editText?.showSoftInputOnFocus = false
+                                }
+                                .onFocusChanged { focusState ->
+                                    isTextFieldFocused = focusState.isFocused
+                                    if (!focusState.isFocused) {
+                                        keyboardController?.hide()
+                                    }
+                                },
+                            textStyle = TextStyle(
+                                fontSize = 16.sp,
+                                lineHeight = 26.sp,
+                                color = Color.Transparent
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            interactionSource = interactionSource,
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (editContent.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.novel_chapter_content),
+                                            style = TextStyle(
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                        )
+                                    }
+                                    innerTextField()
+                                }
                             }
-                        },
-                    textStyle = TextStyle(
-                        fontSize = 16.sp,
-                        lineHeight = 26.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    interactionSource = interactionSource,
-                    decorationBox = { innerTextField ->
-                        Box {
-                            if (editContent.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.novel_chapter_content),
-                                    style = TextStyle(
-                                        fontSize = 16.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    )
-                                )
-                            }
-                            innerTextField()
-                        }
+                        )
                     }
-                )
+                } else {
+                    // 原始模式：单一颜色
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                            viewModel.updateContent(newValue.text)
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .onGloballyPositioned {
+                                val editText = findEditText(rootView)
+                                editText?.showSoftInputOnFocus = false
+                            }
+                            .onFocusChanged { focusState ->
+                                isTextFieldFocused = focusState.isFocused
+                                if (!focusState.isFocused) {
+                                    keyboardController?.hide()
+                                }
+                            },
+                        textStyle = TextStyle(
+                            fontSize = 16.sp,
+                            lineHeight = 26.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        interactionSource = interactionSource,
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (editContent.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.novel_chapter_content),
+                                        style = TextStyle(
+                                            fontSize = 16.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+                }
             }
         }
     }

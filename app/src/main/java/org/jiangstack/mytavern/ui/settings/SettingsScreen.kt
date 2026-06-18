@@ -2,7 +2,11 @@ package org.jiangstack.mytavern.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
@@ -32,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -43,6 +50,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -51,6 +60,7 @@ import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.ThemeMode
+import org.jiangstack.mytavern.ui.novel.buildDialogueAnnotatedString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +87,8 @@ fun SettingsScreen(
     val userCharacters by viewModel.userCharacters.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
+    val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
 
     var showCharacterPicker by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
@@ -296,6 +308,81 @@ fun SettingsScreen(
                             Text(
                                 text = "小说AI提示词设置",
                                 style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_dialogue_highlight),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Switch(
+                                checked = dialogueHighlightEnabled,
+                                onCheckedChange = { viewModel.setDialogueHighlightEnabled(it) }
+                            )
+                        }
+                        if (dialogueHighlightEnabled) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.settings_dialogue_highlight_color),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val presetColors = listOf(
+                                0xFF4FC3F7L, // 浅蓝
+                                0xFF26C6DAL, // 青色
+                                0xFFAB47BCL, // 紫色
+                                0xFF66BB6AL, // 绿色
+                                0xFFFFA726L, // 橙色
+                                0xFFEF5350L  // 红色
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                presetColors.forEach { color ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(color))
+                                            .then(
+                                                if (dialogueHighlightColor == color) {
+                                                    Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .clickable { viewModel.setDialogueHighlightColor(color) }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = buildDialogueAnnotatedString(
+                                    stringResource(R.string.settings_dialogue_highlight_preview),
+                                    Color(dialogueHighlightColor)
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }

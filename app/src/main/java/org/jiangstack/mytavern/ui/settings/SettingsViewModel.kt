@@ -72,6 +72,12 @@ class SettingsViewModel(
     private val _backupState = MutableStateFlow<BackupState>(BackupState.Idle)
     val backupState: StateFlow<BackupState> = _backupState.asStateFlow()
 
+    val dialogueHighlightEnabled: StateFlow<Boolean> = userPreferencesRepository.dialogueHighlightEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val dialogueHighlightColor: StateFlow<Long> = userPreferencesRepository.dialogueHighlightColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF4FC3F7L)
+
     fun setDefaultUserCharacter(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultUserCharacterId(id)
@@ -130,6 +136,14 @@ class SettingsViewModel(
         viewModelScope.launch {
             userPreferencesRepository.setMaxTokens(value.coerceIn(256, 32768))
         }
+    }
+
+    fun setDialogueHighlightEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setDialogueHighlightEnabled(enabled) }
+    }
+
+    fun setDialogueHighlightColor(color: Long) {
+        viewModelScope.launch { userPreferencesRepository.setDialogueHighlightColor(color) }
     }
 
     fun saveQuickReply(quickReply: QuickReply) {
