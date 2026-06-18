@@ -10,5 +10,6 @@ data class HttpLog(
     val responseCode: Int,
     val responseHeaders: String,
     val responseBody: String,
+    val responseSummary: String,
     val durationMs: Long
 )

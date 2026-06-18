@@ -78,6 +78,9 @@ class SettingsViewModel(
     val dialogueHighlightColor: StateFlow<Long> = userPreferencesRepository.dialogueHighlightColor
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF4FC3F7L)
 
+    val interactiveMaxIterations: StateFlow<Int> = userPreferencesRepository.interactiveMaxIterations
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+
     fun setDefaultUserCharacter(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultUserCharacterId(id)
@@ -144,6 +147,12 @@ class SettingsViewModel(
 
     fun setDialogueHighlightColor(color: Long) {
         viewModelScope.launch { userPreferencesRepository.setDialogueHighlightColor(color) }
+    }
+
+    fun setInteractiveMaxIterations(count: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setInteractiveMaxIterations(count.coerceIn(1, 10))
+        }
     }
 
     fun saveQuickReply(quickReply: QuickReply) {

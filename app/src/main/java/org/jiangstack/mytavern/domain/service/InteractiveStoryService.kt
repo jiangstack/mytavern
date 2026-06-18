@@ -22,10 +22,13 @@ import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.InteractiveGameRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 
+import org.jiangstack.mytavern.domain.repository.WorldBookRepository
+
 class InteractiveStoryService(
     private val llmService: LlmService,
     private val gameRepository: InteractiveGameRepository,
     private val characterRepository: CharacterRepository,
+    private val worldBookRepository: WorldBookRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val json: Json
 ) {
@@ -38,7 +41,6 @@ class InteractiveStoryService(
     }
 
     companion object {
-        const val MAX_ITERATIONS = 5
 
         val updateCharacterStatusTool = Tool(
             function = ToolFunction(
@@ -107,12 +109,13 @@ class InteractiveStoryService(
         userAction: String,
         freeMode: Boolean = false
     ): Flow<StoryEvent> = flow {
+        val maxIterations = userPreferencesRepository.interactiveMaxIterations.first()
         val (systemPrompt, chatMessages) = buildMessages(game, messages, gameState, userAction)
 
         var iteration = 0
         val collectedActionOptions = mutableListOf<String>()
 
-        while (iteration < MAX_ITERATIONS) {
+        while (iteration < maxIterations) {
             iteration++
             val fullContent = StringBuilder()
             var toolCalls: List<ToolCall>? = null
@@ -234,7 +237,7 @@ class InteractiveStoryService(
             }
         }
 
-        emit(StoryEvent.Error("已达到最大迭代轮次($MAX_ITERATIONS)，故事推进结束。"))
+        emit(StoryEvent.Error("已达到最大迭代轮次($maxIterations)，故事推进结束。"))
         emit(StoryEvent.ActionOptions(collectedActionOptions))
     }
 
@@ -244,7 +247,8 @@ class InteractiveStoryService(
         PromptBlockType.INTERACTIVE_PARTICIPATING_CHARACTERS,
         PromptBlockType.INTERACTIVE_PLAY_CHARACTER,
         PromptBlockType.INTERACTIVE_STORY_BACKGROUND,
-        PromptBlockType.INTERACTIVE_STORY_MAIN_PLOT -> "system"
+        PromptBlockType.INTERACTIVE_STORY_MAIN_PLOT,
+        PromptBlockType.INTERACTIVE_WORLD_BOOK -> "system"
 
         PromptBlockType.INTERACTIVE_STORY_CONTENT,
         PromptBlockType.INTERACTIVE_CURRENT_STATE -> "assistant"
@@ -254,6 +258,7 @@ class InteractiveStoryService(
 
         else -> null
     }
+
 
     private suspend fun buildMessages(
         game: InteractiveGame,
@@ -326,6 +331,20 @@ class InteractiveStoryService(
 
             PromptBlockType.INTERACTIVE_STORY_MAIN_PLOT -> {
                 if (game.storyMainPlot.isNotBlank()) "## 故事主线\n${game.storyMainPlot}" else null
+            }
+
+            PromptBlockType.INTERACTIVE_WORLD_BOOK -> {
+                val worldBookId = game.worldBookId ?: return null
+                val wb = worldBookRepository.getWorldBookById(worldBookId) ?: return null
+                buildString {
+                    appendLine("## ${wb.name}")
+                    if (wb.description.isNotBlank()) {
+                        appendLine(wb.description)
+                    }
+                    wb.rules.forEach { rule ->
+                        appendLine("- ${rule.name}: ${rule.description}")
+                    }
+                }.trimEnd().takeIf { it.isNotBlank() }
             }
 
             PromptBlockType.INTERACTIVE_STORY_CONTENT -> {

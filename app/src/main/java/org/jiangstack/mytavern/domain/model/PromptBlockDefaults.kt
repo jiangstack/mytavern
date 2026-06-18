@@ -81,9 +81,10 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.INTERACTIVE_PLAY_CHARACTER, true, 3),
         PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_BACKGROUND, true, 4),
         PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_MAIN_PLOT, true, 5),
-        PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_CONTENT, true, 6),
-        PromptBlockConfig(PromptBlockType.INTERACTIVE_CURRENT_STATE, true, 7),
-        PromptBlockConfig(PromptBlockType.INTERACTIVE_USER_CHOICE, true, 8),
-        PromptBlockConfig(PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION, true, 9)
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_WORLD_BOOK, true, 6),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_STORY_CONTENT, true, 7),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_CURRENT_STATE, true, 8),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_USER_CHOICE, true, 9),
+        PromptBlockConfig(PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION, true, 10)
     )
 }

@@ -125,6 +125,6 @@ class AppContainer(context: Context) {
     }
 
     val interactiveStoryService: InteractiveStoryService by lazy {
-        InteractiveStoryService(llmService, interactiveGameRepository, characterRepository, userPreferencesRepository, json)
+        InteractiveStoryService(llmService, interactiveGameRepository, characterRepository, worldBookRepository, userPreferencesRepository, json)
     }
 }

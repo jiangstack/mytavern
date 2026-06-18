@@ -25,6 +25,8 @@ interface UserPreferencesRepository {
     suspend fun setNovelOutlinePromptBlocks(blocks: List<PromptBlockConfig>)
     val interactivePromptBlocks: Flow<List<PromptBlockConfig>>
     suspend fun setInteractivePromptBlocks(blocks: List<PromptBlockConfig>)
+    val interactiveMaxIterations: Flow<Int>
+    suspend fun setInteractiveMaxIterations(count: Int)
     val dialogueHighlightEnabled: Flow<Boolean>
     suspend fun setDialogueHighlightEnabled(enabled: Boolean)
     val dialogueHighlightColor: Flow<Long>

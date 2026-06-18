@@ -3,6 +3,11 @@ package org.jiangstack.mytavern.data.remote
 import okhttp3.Interceptor
 import okhttp3.Response
 import okio.Buffer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import org.jiangstack.mytavern.data.repository.HttpLogRepository
 import org.jiangstack.mytavern.domain.model.HttpLog
 
@@ -39,6 +44,7 @@ class HttpLogInterceptor(
                 responseCode = -1,
                 responseHeaders = "",
                 responseBody = e.message ?: "Unknown error",
+                responseSummary = "",
                 durationMs = System.currentTimeMillis() - startTime
             )
             httpLogRepository.add(log)
@@ -55,7 +61,6 @@ class HttpLogInterceptor(
         } catch (_: Exception) {
             ""
         }
-
         val log = HttpLog(
             id = httpLogRepository.nextId(),
             timestamp = startTime,
@@ -66,6 +71,7 @@ class HttpLogInterceptor(
             responseCode = response.code,
             responseHeaders = responseHeaders,
             responseBody = responseBody,
+            responseSummary = extractSummary(responseBody),
             durationMs = durationMs
         )
         httpLogRepository.add(log)
@@ -87,5 +93,38 @@ class HttpLogInterceptor(
 
     private fun String.truncate(): String {
         return if (length > MAX_BODY_LENGTH) substring(0, MAX_BODY_LENGTH) + "\n... (${length - MAX_BODY_LENGTH} more chars)" else this
+    }
+
+    private fun extractSummary(responseBody: String): String {
+        if (responseBody.isBlank()) return ""
+        return try {
+            val json = Json.parseToJsonElement(responseBody).jsonObject
+            val parts = mutableListOf<String>()
+
+            // OpenAI format: choices[0].finish_reason
+            json["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("finish_reason")?.jsonPrimitive?.content?.let {
+                parts.add(it)
+            }
+
+            // Anthropic format: stop_reason
+            json["stop_reason"]?.jsonPrimitive?.content?.let {
+                parts.add(it)
+            }
+
+            // Model name
+            json["model"]?.jsonPrimitive?.content?.let { model ->
+                // Truncate long model names (e.g., "deepseek/deepseek-v4-pro" -> "deepseek-v4-pro")
+                parts.add(model.substringAfterLast("/"))
+            }
+
+            // Token usage
+            json["usage"]?.jsonObject?.get("total_tokens")?.jsonPrimitive?.int?.let {
+                parts.add("${it} tokens")
+            }
+
+            parts.joinToString(" | ")
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
