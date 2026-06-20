@@ -18,6 +18,9 @@ interface InteractiveMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: InteractiveMessageEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(messages: List<InteractiveMessageEntity>): List<Long>
+
     @Query("DELETE FROM interactive_messages WHERE gameId = :gameId")
     suspend fun deleteByGameId(gameId: Long)
 }

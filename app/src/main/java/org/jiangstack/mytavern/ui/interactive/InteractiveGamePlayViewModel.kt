@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.domain.model.Character
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpointSnapshot
 import org.jiangstack.mytavern.domain.model.InteractiveGame
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
@@ -20,6 +22,8 @@ import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.InteractiveGameRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.service.InteractiveStoryService
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class InteractiveGamePlayViewModel(
     private val gameId: Long,
@@ -52,6 +56,13 @@ class InteractiveGamePlayViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _checkpointLoaded = MutableStateFlow<String?>(null)
+    val checkpointLoaded: StateFlow<String?> = _checkpointLoaded.asStateFlow()
+
+    val checkpoints: StateFlow<List<InteractiveCheckpoint>> =
+        gameRepository.getCheckpointsByGameId(gameId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val storyWordCount: StateFlow<Int> = combine(_messages, _currentStoryText) { messages, current ->
         messages.filter { it.role != "user" }.sumOf { it.content.length } + current.length
@@ -139,6 +150,7 @@ class InteractiveGamePlayViewModel(
             }
 
             val storyBuilder = StringBuilder()
+            var insertedNarrator = false
             try {
                 storyService.runStoryTurn(
                     game = currentGame,
@@ -171,6 +183,8 @@ class InteractiveGamePlayViewModel(
                                     actionOptions = _actionOptions.value
                                 )
                                 gameRepository.insertMessage(narratorMessage)
+                                insertedNarrator = true
+                                createCheckpointAfterTurn(userAction, narratorMessage)
                             }
                         }
                     }
@@ -178,7 +192,7 @@ class InteractiveGamePlayViewModel(
             } catch (e: Exception) {
                 _error.value = e.message ?: "未知错误"
             } finally {
-                if (_error.value != null && storyBuilder.isNotEmpty()) {
+                if (_error.value != null && storyBuilder.isNotEmpty() && !insertedNarrator) {
                     val narratorMessage = InteractiveMessage(
                         gameId = gameId,
                         role = "narrator",
@@ -186,10 +200,70 @@ class InteractiveGamePlayViewModel(
                         actionOptions = _actionOptions.value
                     )
                     gameRepository.insertMessage(narratorMessage)
+                    createCheckpointAfterTurn(userAction, narratorMessage)
                 }
                 _isStreaming.value = false
                 _currentStoryText.value = ""
             }
+        }
+    }
+
+    private suspend fun createCheckpointAfterTurn(userAction: String, latestMessage: InteractiveMessage? = null) {
+        val name = userAction.trim().ifBlank {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())
+        }
+        val currentMessages = _messages.value
+        val snapshotMessages = if (latestMessage != null &&
+            currentMessages.none { it.id == latestMessage.id && it.role == latestMessage.role && it.content == latestMessage.content }
+        ) {
+            currentMessages + latestMessage
+        } else {
+            currentMessages
+        }
+        val snapshot = InteractiveCheckpointSnapshot(
+            messages = snapshotMessages,
+            gameState = _gameState.value
+        )
+        val parentId = _gameState.value?.activeCheckpointId
+        val newId = gameRepository.createCheckpoint(
+            gameId = gameId,
+            parentId = parentId,
+            name = name,
+            snapshot = snapshot
+        )
+        val currentState = _gameState.value
+        if (currentState != null) {
+            gameRepository.insertOrUpdateGameState(
+                currentState.copy(activeCheckpointId = newId)
+            )
+        } else {
+            gameRepository.insertOrUpdateGameState(
+                InteractiveGameState(gameId = gameId, activeCheckpointId = newId)
+            )
+        }
+    }
+
+    fun loadCheckpoint(id: Long) {
+        viewModelScope.launch {
+            gameRepository.loadCheckpoint(id)
+            _checkpointLoaded.value = "已加载保存点"
+        }
+    }
+
+    fun clearCheckpointLoaded() {
+        _checkpointLoaded.value = null
+    }
+
+    fun renameCheckpoint(id: Long, name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            gameRepository.updateCheckpointName(id, name)
+        }
+    }
+
+    fun deleteCheckpoint(checkpoint: InteractiveCheckpoint) {
+        viewModelScope.launch {
+            gameRepository.deleteCheckpoint(checkpoint)
         }
     }
 
@@ -199,11 +273,13 @@ class InteractiveGamePlayViewModel(
 
     fun updateGameState(environment: String, characterStatus: String, characterItems: String) {
         viewModelScope.launch {
+            val currentActiveId = _gameState.value?.activeCheckpointId
             val state = InteractiveGameState(
                 gameId = gameId,
                 environment = environment,
                 characterStatus = characterStatus,
-                characterItems = characterItems
+                characterItems = characterItems,
+                activeCheckpointId = currentActiveId
             )
             gameRepository.insertOrUpdateGameState(state)
             _gameState.value = state
@@ -223,6 +299,12 @@ class InteractiveGamePlayViewModel(
             _actionOptions.value = emptyList()
             _error.value = null
             gameRepository.deleteMessagesByGameId(gameId)
+            val currentState = _gameState.value
+            if (currentState != null) {
+                gameRepository.insertOrUpdateGameState(
+                    currentState.copy(activeCheckpointId = null)
+                )
+            }
         }
     }
 

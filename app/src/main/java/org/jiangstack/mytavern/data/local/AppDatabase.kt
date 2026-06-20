@@ -9,6 +9,7 @@ import org.jiangstack.mytavern.data.local.dao.InteractiveGameCharacterDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveGameDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveGameStateDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveMessageDao
+import org.jiangstack.mytavern.data.local.dao.InteractiveCheckpointDao
 import org.jiangstack.mytavern.data.local.dao.LlmConfigDao
 import org.jiangstack.mytavern.data.local.dao.NovelCharacterDao
 import org.jiangstack.mytavern.data.local.dao.NovelCharacterItemDao
@@ -24,6 +25,7 @@ import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 import org.jiangstack.mytavern.data.local.entity.ChatSessionEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameEntity
+import org.jiangstack.mytavern.data.local.entity.InteractiveCheckpointEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameStateEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveMessageEntity
 import org.jiangstack.mytavern.data.local.entity.LlmConfigEntity
@@ -55,9 +57,10 @@ import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
         InteractiveGameEntity::class,
         InteractiveGameCharacterEntity::class,
         InteractiveMessageEntity::class,
-        InteractiveGameStateEntity::class
+        InteractiveGameStateEntity::class,
+        InteractiveCheckpointEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -78,4 +81,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun interactiveGameCharacterDao(): InteractiveGameCharacterDao
     abstract fun interactiveMessageDao(): InteractiveMessageDao
     abstract fun interactiveGameStateDao(): InteractiveGameStateDao
+    abstract fun interactiveCheckpointDao(): InteractiveCheckpointDao
 }

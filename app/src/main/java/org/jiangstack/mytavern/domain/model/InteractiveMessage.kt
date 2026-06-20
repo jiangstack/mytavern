@@ -1,5 +1,8 @@
 package org.jiangstack.mytavern.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class InteractiveMessage(
     val id: Long = 0,
     val gameId: Long,

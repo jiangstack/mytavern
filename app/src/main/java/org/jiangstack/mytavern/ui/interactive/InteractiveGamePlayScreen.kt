@@ -1,5 +1,6 @@
 package org.jiangstack.mytavern.ui.interactive
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.Character
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
 
@@ -101,9 +104,15 @@ fun InteractiveGamePlayScreen(
     val contextBoundaryIndex by viewModel.contextBoundaryIndex.collectAsState()
     val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
     val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
+    val checkpoints by viewModel.checkpoints.collectAsState()
+    val checkpointLoaded by viewModel.checkpointLoaded.collectAsState()
+
 
     var customAction by remember { mutableStateOf("") }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showCheckpointSheet by remember { mutableStateOf(false) }
+    var checkpointToRename by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
+    var checkpointToDelete by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
     var selectedCharacterId by remember { mutableStateOf<Long?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -125,6 +134,14 @@ fun InteractiveGamePlayScreen(
         error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    // Show checkpoint loaded snackbar
+    LaunchedEffect(checkpointLoaded) {
+        checkpointLoaded?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearCheckpointLoaded()
         }
     }
 
@@ -261,10 +278,20 @@ fun InteractiveGamePlayScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
                         )
-                        FilledTonalButton(onClick = { viewModel.continueStory() }) {
-                            Icon(Icons.Default.SkipNext, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.interactive_continue))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(onClick = { showCheckpointSheet = true }) {
+                                Icon(Icons.Default.Save, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.interactive_checkpoints))
+                            }
+                            FilledTonalButton(onClick = { viewModel.continueStory() }) {
+                                Icon(Icons.Default.SkipNext, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.interactive_continue))
+                            }
                         }
                     }
                 }
@@ -307,6 +334,42 @@ fun InteractiveGamePlayScreen(
                 showSettingsSheet = false
             },
             onClearStory = { viewModel.clearStory() }
+        )
+    }
+
+    // Checkpoint bottom sheet
+    if (showCheckpointSheet) {
+        CheckpointBottomSheet(
+            checkpoints = checkpoints,
+            onDismiss = { showCheckpointSheet = false },
+            onLoad = {
+                viewModel.loadCheckpoint(it.id)
+                showCheckpointSheet = false
+            },
+            onRename = { checkpointToRename = it },
+            onDelete = { checkpointToDelete = it }
+        )
+    }
+
+    checkpointToRename?.let { checkpoint ->
+        RenameCheckpointDialog(
+            initialName = checkpoint.name,
+            onDismiss = { checkpointToRename = null },
+            onConfirm = { name ->
+                viewModel.renameCheckpoint(checkpoint.id, name)
+                checkpointToRename = null
+            }
+        )
+    }
+
+    checkpointToDelete?.let { checkpoint ->
+        DeleteCheckpointDialog(
+            checkpoint = checkpoint,
+            onDismiss = { checkpointToDelete = null },
+            onConfirm = {
+                viewModel.deleteCheckpoint(checkpoint)
+                checkpointToDelete = null
+            }
         )
     }
 }
@@ -694,4 +757,203 @@ private fun SettingsBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CheckpointBottomSheet(
+    checkpoints: List<InteractiveCheckpoint>,
+    onDismiss: () -> Unit,
+    onLoad: (InteractiveCheckpoint) -> Unit,
+    onRename: (InteractiveCheckpoint) -> Unit,
+    onDelete: (InteractiveCheckpoint) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val treeNodes = remember(checkpoints) { buildCheckpointTree(checkpoints) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.interactive_checkpoint_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (treeNodes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.interactive_checkpoint_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexed(treeNodes, key = { _, node -> node.checkpoint.id }) { _, node ->
+                        CheckpointTreeItem(
+                            node = node,
+                            onLoad = onLoad,
+                            onRename = onRename,
+                            onDelete = onDelete
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun CheckpointTreeItem(
+    node: CheckpointTreeNode,
+    onLoad: (InteractiveCheckpoint) -> Unit,
+    onRename: (InteractiveCheckpoint) -> Unit,
+    onDelete: (InteractiveCheckpoint) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = (node.depth * 24).dp)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = node.checkpoint.name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onLoad(node.checkpoint) }
+                .padding(vertical = 4.dp)
+        )
+        Row {
+            IconButton(onClick = { onRename(node.checkpoint) }) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.interactive_checkpoint_rename)
+                )
+            }
+            IconButton(onClick = { onDelete(node.checkpoint) }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.interactive_checkpoint_delete)
+                )
+            }
+        }
+    }
+}
+
+private data class CheckpointTreeNode(
+    val checkpoint: InteractiveCheckpoint,
+    val depth: Int
+)
+
+private fun buildCheckpointTree(checkpoints: List<InteractiveCheckpoint>): List<CheckpointTreeNode> {
+    val byParent = checkpoints.groupBy { it.parentId }
+    val result = mutableListOf<CheckpointTreeNode>()
+    val roots = checkpoints.filter { it.parentId == null }.sortedBy { it.createdAt }
+
+    fun traverse(checkpoint: InteractiveCheckpoint, depth: Int) {
+        result.add(CheckpointTreeNode(checkpoint, depth))
+        byParent[checkpoint.id]
+            ?.sortedBy { it.createdAt }
+            ?.forEach { traverse(it, depth + 1) }
+    }
+
+    roots.forEach { traverse(it, 0) }
+    return result
+}
+
+@Composable
+private fun RenameCheckpointDialog(
+    initialName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember(initialName) { mutableStateOf(initialName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.interactive_checkpoint_rename)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.interactive_checkpoint_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim()) },
+                enabled = name.trim().isNotEmpty()
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun DeleteCheckpointDialog(
+    checkpoint: InteractiveCheckpoint,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.interactive_checkpoint_delete)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.interactive_checkpoint_delete_message,
+                    checkpoint.name
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

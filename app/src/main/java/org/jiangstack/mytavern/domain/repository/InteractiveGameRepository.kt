@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 import org.jiangstack.mytavern.domain.model.InteractiveGame
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpointSnapshot
 
 interface InteractiveGameRepository {
     // 游戏 CRUD
@@ -28,4 +30,12 @@ interface InteractiveGameRepository {
     fun getCharacterIdsByGameId(gameId: Long): Flow<List<Long>>
     suspend fun getCharacterIdsByGameIdSync(gameId: Long): List<Long>
     suspend fun setGameCharacters(gameId: Long, characterIds: List<Long>)
+
+    // 保存点
+    fun getCheckpointsByGameId(gameId: Long): Flow<List<InteractiveCheckpoint>>
+    suspend fun getCheckpointById(id: Long): InteractiveCheckpoint?
+    suspend fun createCheckpoint(gameId: Long, parentId: Long?, name: String, snapshot: InteractiveCheckpointSnapshot): Long
+    suspend fun updateCheckpointName(id: Long, name: String)
+    suspend fun deleteCheckpoint(checkpoint: InteractiveCheckpoint)
+    suspend fun loadCheckpoint(checkpointId: Long)
 }

@@ -248,6 +248,14 @@
     <string name="interactive_story_word_count">字数：%1$d</string>
     <string name="interactive_clear_story">清空故事内容</string>
     <string name="interactive_clear_story_title">清空故事内容</string>
+    <string name="interactive_checkpoints">保存点</string>
+    <string name="interactive_checkpoint_title">保存点</string>
+    <string name="interactive_checkpoint_empty">暂无保存点</string>
+    <string name="interactive_checkpoint_rename">重命名</string>
+    <string name="interactive_checkpoint_delete">删除保存点</string>
+    <string name="interactive_checkpoint_delete_message">确定要删除保存点「%1$s」吗？其下所有子保存点也将被删除。</string>
+    <string name="interactive_checkpoint_loaded">已加载保存点</string>
+    <string name="interactive_checkpoint_name">保存点名称</string>
     <string name="interactive_clear_story_message">确定要清空当前故事的所有内容吗？此操作不可撤销。</string>
     <string name="interactive_clear">清空</string>
     <string name="interactive_prompt_settings_title">提示词设置</string>

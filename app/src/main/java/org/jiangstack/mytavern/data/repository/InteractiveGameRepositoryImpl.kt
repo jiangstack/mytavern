@@ -1,17 +1,23 @@
 package org.jiangstack.mytavern.data.repository
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.jiangstack.mytavern.data.local.dao.InteractiveCheckpointDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveGameCharacterDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveGameDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveGameStateDao
 import org.jiangstack.mytavern.data.local.dao.InteractiveMessageDao
+import org.jiangstack.mytavern.data.local.entity.InteractiveCheckpointEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveGameStateEntity
 import org.jiangstack.mytavern.data.local.entity.InteractiveMessageEntity
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
+import org.jiangstack.mytavern.domain.model.InteractiveCheckpointSnapshot
 import org.jiangstack.mytavern.domain.model.InteractiveGame
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
@@ -22,6 +28,7 @@ class InteractiveGameRepositoryImpl(
     private val gameCharacterDao: InteractiveGameCharacterDao,
     private val messageDao: InteractiveMessageDao,
     private val gameStateDao: InteractiveGameStateDao,
+    private val checkpointDao: InteractiveCheckpointDao,
     private val json: Json
 ) : InteractiveGameRepository {
 
@@ -106,6 +113,75 @@ class InteractiveGameRepositoryImpl(
         }
     }
 
+    // ========== 保存点 ==========
+
+    override fun getCheckpointsByGameId(gameId: Long): Flow<List<InteractiveCheckpoint>> {
+        return checkpointDao.getByGameId(gameId).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun getCheckpointById(id: Long): InteractiveCheckpoint? {
+        return checkpointDao.getById(id)?.toDomain()
+    }
+
+    override suspend fun createCheckpoint(
+        gameId: Long,
+        parentId: Long?,
+        name: String,
+        snapshot: InteractiveCheckpointSnapshot
+    ): Long {
+        val entity = InteractiveCheckpointEntity(
+            gameId = gameId,
+            parentId = parentId,
+            name = name,
+            snapshot = json.encodeToString(snapshot)
+        )
+        return checkpointDao.insert(entity)
+    }
+
+    override suspend fun updateCheckpointName(id: Long, name: String) {
+        checkpointDao.getById(id)?.let {
+            checkpointDao.update(it.copy(name = name))
+        }
+    }
+
+    override suspend fun deleteCheckpoint(checkpoint: InteractiveCheckpoint) {
+        val allCheckpoints = checkpointDao.getByGameId(checkpoint.gameId).first()
+        val subtreeIds = buildSubtreeIds(allCheckpoints, checkpoint.id)
+
+        checkpointDao.delete(checkpoint.toEntity())
+
+        val currentState = gameStateDao.getByGameIdSync(checkpoint.gameId)
+        if (currentState != null && currentState.activeCheckpointId in subtreeIds) {
+            val newActiveId = checkpoint.parentId
+            gameStateDao.insertOrUpdate(
+                currentState.copy(activeCheckpointId = newActiveId)
+            )
+        }
+    }
+
+    override suspend fun loadCheckpoint(checkpointId: Long) {
+        val checkpoint = checkpointDao.getById(checkpointId) ?: return
+        val snapshot = checkpoint.toDomain().snapshot
+
+        messageDao.deleteByGameId(checkpoint.gameId)
+
+        val restoredMessages = snapshot.messages.map { it.copy(id = 0) }
+        if (restoredMessages.isNotEmpty()) {
+            messageDao.insertAll(restoredMessages.map { it.toEntity() })
+        }
+
+        val restoredState = snapshot.gameState?.copy(
+            gameId = checkpoint.gameId,
+            activeCheckpointId = checkpoint.id
+        ) ?: InteractiveGameState(
+            gameId = checkpoint.gameId,
+            activeCheckpointId = checkpoint.id
+        )
+        gameStateDao.insertOrUpdate(restoredState.toEntity())
+    }
+
     // ========== 映射 ==========
 
     private fun InteractiveGameEntity.toDomain() = InteractiveGame(
@@ -158,7 +234,8 @@ class InteractiveGameRepositoryImpl(
         gameId = gameId,
         environment = environment,
         characterStatus = characterStatus,
-        characterItems = characterItems
+        characterItems = characterItems,
+        activeCheckpointId = activeCheckpointId
     )
 
     private fun InteractiveGameState.toEntity() = InteractiveGameStateEntity(
@@ -166,6 +243,43 @@ class InteractiveGameRepositoryImpl(
         environment = environment,
         characterStatus = characterStatus,
         characterItems = characterItems,
+        activeCheckpointId = activeCheckpointId,
         updatedAt = System.currentTimeMillis()
     )
+
+    private fun InteractiveCheckpointEntity.toDomain() = InteractiveCheckpoint(
+        id = id,
+        gameId = gameId,
+        parentId = parentId,
+        name = name,
+        snapshot = try {
+            json.decodeFromString<InteractiveCheckpointSnapshot>(snapshot)
+        } catch (_: Exception) {
+            InteractiveCheckpointSnapshot(emptyList(), null)
+        },
+        createdAt = createdAt
+    )
+
+    private fun InteractiveCheckpoint.toEntity() = InteractiveCheckpointEntity(
+        id = id,
+        gameId = gameId,
+        parentId = parentId,
+        name = name,
+        snapshot = json.encodeToString(snapshot),
+        createdAt = createdAt
+    )
+
+    private fun buildSubtreeIds(checkpoints: List<InteractiveCheckpointEntity>, rootId: Long): Set<Long> {
+        val byParent = checkpoints.groupBy { it.parentId }
+        val result = mutableSetOf<Long>()
+        val queue = ArrayDeque<Long>()
+        queue.add(rootId)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (result.add(current)) {
+                byParent[current]?.forEach { queue.add(it.id) }
+            }
+        }
+        return result
+    }
 }
