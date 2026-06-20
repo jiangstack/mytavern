@@ -35,7 +35,7 @@ object PromptBlockDefaults {
                 "你是一个互动故事的讲述者。"
 
             PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION ->
-                "请继续推进故事。使用 function call 更新人物状态、人物物品、当前环境，并提供3-5个行动选项。故事内容直接输出，不要加标题或解释。"
+                "请对用户的选择进行讲述后继续推进故事，关键选择时停止。并为用户的扮演角色提供2个行动选项。故事内容直接输出，不要加标题或解释。使用人名称呼角色，不使用人称代词。每次输出必须包含本内容和function call（更新状态）"
 
             else -> null
         }

@@ -2,6 +2,9 @@ package org.jiangstack.mytavern.ui.interactive
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -341,6 +344,7 @@ fun InteractiveGamePlayScreen(
     if (showCheckpointSheet) {
         CheckpointBottomSheet(
             checkpoints = checkpoints,
+            activeCheckpointId = gameState?.activeCheckpointId,
             onDismiss = { showCheckpointSheet = false },
             onLoad = {
                 viewModel.loadCheckpoint(it.id)
@@ -763,6 +767,7 @@ private fun SettingsBottomSheet(
 @Composable
 private fun CheckpointBottomSheet(
     checkpoints: List<InteractiveCheckpoint>,
+    activeCheckpointId: Long?,
     onDismiss: () -> Unit,
     onLoad: (InteractiveCheckpoint) -> Unit,
     onRename: (InteractiveCheckpoint) -> Unit,
@@ -806,6 +811,7 @@ private fun CheckpointBottomSheet(
                     itemsIndexed(treeNodes, key = { _, node -> node.checkpoint.id }) { _, node ->
                         CheckpointTreeItem(
                             node = node,
+                            isActive = node.checkpoint.id == activeCheckpointId,
                             onLoad = onLoad,
                             onRename = onRename,
                             onDelete = onDelete
@@ -831,46 +837,144 @@ private fun CheckpointBottomSheet(
 @Composable
 private fun CheckpointTreeItem(
     node: CheckpointTreeNode,
+    isActive: Boolean,
     onLoad: (InteractiveCheckpoint) -> Unit,
     onRename: (InteractiveCheckpoint) -> Unit,
     onDelete: (InteractiveCheckpoint) -> Unit
 ) {
+    val containerColor = if (isActive) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        Color.Transparent
+    }
+    val contentColor = if (isActive) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = (node.depth * 24).dp)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
+            .padding(vertical = 2.dp)
+            .then(
+                if (isActive) {
+                    Modifier.background(
+                        color = containerColor,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .padding(vertical = 10.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = node.checkpoint.name,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onLoad(node.checkpoint) }
-                .padding(vertical = 4.dp)
-        )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TreeIndicator(node = node, isActive = isActive)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = node.checkpoint.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onLoad(node.checkpoint) }
+                    .padding(vertical = 4.dp)
+            )
+        }
         Row {
+            if (isActive) {
+                Text(
+                    text = "当前",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 8.dp)
+                        .align(Alignment.CenterVertically)
+                )
+            }
             IconButton(onClick = { onRename(node.checkpoint) }) {
                 Icon(
-                    Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.interactive_checkpoint_rename)
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.interactive_checkpoint_rename),
+                    tint = contentColor
                 )
             }
             IconButton(onClick = { onDelete(node.checkpoint) }) {
                 Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.interactive_checkpoint_delete)
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.interactive_checkpoint_delete),
+                    tint = contentColor
                 )
             }
         }
     }
 }
 
+@Composable
+private fun TreeIndicator(node: CheckpointTreeNode, isActive: Boolean) {
+    val lineColor = MaterialTheme.colorScheme.outlineVariant
+    val activeLineColor = MaterialTheme.colorScheme.primary
+    val bulletColor = if (isActive) activeLineColor else lineColor
+    val levelWidth = 28.dp
+    Canvas(
+        modifier = Modifier
+            .width(levelWidth * (node.depth + 1))
+            .height(24.dp)
+    ) {
+        val pxPerLevel = levelWidth.toPx()
+        val halfLevel = pxPerLevel / 2f
+        val midY = size.height / 2f
+        val currentX = node.depth * pxPerLevel + halfLevel
+
+        node.ancestorHasNextSibling.forEachIndexed { index, hasNextSibling ->
+            if (hasNextSibling) {
+                val x = index * pxPerLevel + halfLevel
+                drawLine(
+                    color = lineColor,
+                    start = Offset(x, 0f),
+                    end = Offset(x, size.height),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+        }
+
+        if (node.depth > 0) {
+            val parentX = (node.depth - 1) * pxPerLevel + halfLevel
+            if (!node.isLastChild) {
+                drawLine(
+                    color = lineColor,
+                    start = Offset(parentX, midY),
+                    end = Offset(parentX, size.height),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+            drawLine(
+                color = lineColor,
+                start = Offset(parentX, midY),
+                end = Offset(currentX, midY),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        drawCircle(
+            color = bulletColor,
+            radius = if (isActive) 4.5.dp.toPx() else 3.dp.toPx(),
+            center = Offset(currentX, midY)
+        )
+    }
+}
+
 private data class CheckpointTreeNode(
     val checkpoint: InteractiveCheckpoint,
-    val depth: Int
+    val depth: Int,
+    val isLastChild: Boolean,
+    val hasChildren: Boolean,
+    val ancestorHasNextSibling: List<Boolean>
 )
 
 private fun buildCheckpointTree(checkpoints: List<InteractiveCheckpoint>): List<CheckpointTreeNode> {
@@ -878,14 +982,35 @@ private fun buildCheckpointTree(checkpoints: List<InteractiveCheckpoint>): List<
     val result = mutableListOf<CheckpointTreeNode>()
     val roots = checkpoints.filter { it.parentId == null }.sortedBy { it.createdAt }
 
-    fun traverse(checkpoint: InteractiveCheckpoint, depth: Int) {
-        result.add(CheckpointTreeNode(checkpoint, depth))
-        byParent[checkpoint.id]
-            ?.sortedBy { it.createdAt }
-            ?.forEach { traverse(it, depth + 1) }
+    fun traverse(
+        checkpoint: InteractiveCheckpoint,
+        depth: Int,
+        parentAncestorFlags: List<Boolean>,
+        isLastChild: Boolean
+    ) {
+        val children = byParent[checkpoint.id]?.sortedBy { it.createdAt } ?: emptyList()
+        result.add(
+            CheckpointTreeNode(
+                checkpoint = checkpoint,
+                depth = depth,
+                isLastChild = isLastChild,
+                hasChildren = children.isNotEmpty(),
+                ancestorHasNextSibling = parentAncestorFlags
+            )
+        )
+        children.forEachIndexed { index, child ->
+            traverse(
+                checkpoint = child,
+                depth = depth + 1,
+                parentAncestorFlags = parentAncestorFlags + !isLastChild,
+                isLastChild = index == children.lastIndex
+            )
+        }
     }
 
-    roots.forEach { traverse(it, 0) }
+    roots.forEachIndexed { index, root ->
+        traverse(root, 0, emptyList(), index == roots.lastIndex)
+    }
     return result
 }
 
