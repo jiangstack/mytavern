@@ -5,6 +5,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -336,7 +339,8 @@ fun InteractiveGamePlayScreen(
                 viewModel.updateGameState(env, status, items)
                 showSettingsSheet = false
             },
-            onClearStory = { viewModel.clearStory() }
+            onClearStory = { viewModel.clearStory() },
+            onClearGameState = { viewModel.clearGameStateFields() }
         )
     }
 
@@ -661,12 +665,14 @@ private fun SettingsBottomSheet(
     gameState: InteractiveGameState?,
     onDismiss: () -> Unit,
     onSave: (environment: String, characterStatus: String, characterItems: String) -> Unit,
-    onClearStory: () -> Unit
+    onClearStory: () -> Unit,
+    onClearGameState: () -> Unit
 ) {
     var environment by remember(gameState) { mutableStateOf(gameState?.environment ?: "") }
     var characterStatus by remember(gameState) { mutableStateOf(gameState?.characterStatus ?: "") }
     var characterItems by remember(gameState) { mutableStateOf(gameState?.characterItems ?: "") }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showClearStateConfirm by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -694,6 +700,30 @@ private fun SettingsBottomSheet(
         )
     }
 
+    if (showClearStateConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearStateConfirm = false },
+            title = { Text(stringResource(R.string.interactive_clear_game_state_title)) },
+            text = { Text(stringResource(R.string.interactive_clear_game_state_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearGameState()
+                        showClearStateConfirm = false
+                        onDismiss()
+                    }
+                ) {
+                    Text(stringResource(R.string.interactive_clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearStateConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
@@ -701,6 +731,7 @@ private fun SettingsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.8f)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
@@ -709,31 +740,39 @@ private fun SettingsBottomSheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = environment,
-                onValueChange = { environment = it },
-                label = { Text(stringResource(R.string.interactive_environment)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = environment,
+                    onValueChange = { environment = it },
+                    label = { Text(stringResource(R.string.interactive_environment)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = characterStatus,
-                onValueChange = { characterStatus = it },
-                label = { Text(stringResource(R.string.interactive_character_status)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = characterStatus,
+                    onValueChange = { characterStatus = it },
+                    label = { Text(stringResource(R.string.interactive_character_status)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = characterItems,
-                onValueChange = { characterItems = it },
-                label = { Text(stringResource(R.string.interactive_character_items)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
+                OutlinedTextField(
+                    value = characterItems,
+                    onValueChange = { characterItems = it },
+                    label = { Text(stringResource(R.string.interactive_character_items)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(
@@ -744,7 +783,14 @@ private fun SettingsBottomSheet(
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.interactive_clear_story))
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(
+                onClick = { showClearStateConfirm = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.interactive_clear_game_state))
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

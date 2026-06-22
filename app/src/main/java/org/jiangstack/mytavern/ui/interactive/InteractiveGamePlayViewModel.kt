@@ -307,6 +307,18 @@ class InteractiveGamePlayViewModel(
             }
         }
     }
+    fun clearGameStateFields() {
+        viewModelScope.launch {
+            val currentState = _gameState.value ?: return@launch
+            val cleared = currentState.copy(
+                environment = "",
+                characterStatus = "",
+                characterItems = ""
+            )
+            gameRepository.insertOrUpdateGameState(cleared)
+            _gameState.value = cleared
+        }
+    }
 
     suspend fun getCharacterById(id: Long): Character? {
         return characterRepository.getCharacterById(id)
