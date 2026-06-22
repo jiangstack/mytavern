@@ -14,6 +14,7 @@ data class InteractiveGameEntity(
     val windowWordCount: Int = 3000,
     val playCharacterId: Long,
     val worldBookId: Long? = null,
+    val backgroundImageUri: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

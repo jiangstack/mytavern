@@ -40,6 +40,7 @@ fun ChatSettingsScreen(
     val viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(
             container.llmConfigRepository,
+            container.imageApiConfigRepository,
             container.characterRepository,
             container.userPreferencesRepository,
             container.quickReplyRepository,

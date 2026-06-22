@@ -9,6 +9,8 @@ interface UserPreferencesRepository {
     suspend fun setDefaultUserCharacterId(id: Long?)
     val defaultLlmConfigId: Flow<Long?>
     suspend fun setDefaultLlmConfigId(id: Long?)
+    val defaultImageApiConfigId: Flow<Long?>
+    suspend fun setDefaultImageApiConfigId(id: Long?)
     val themeMode: Flow<ThemeMode>
     suspend fun setThemeMode(mode: ThemeMode)
     val chatHistoryCount: Flow<Int>

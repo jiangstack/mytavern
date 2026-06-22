@@ -14,14 +14,15 @@ import kotlinx.coroutines.launch
 import org.jiangstack.mytavern.data.repository.BackupRepository
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.CharacterType
+import org.jiangstack.mytavern.domain.model.ImageApiConfig
 import org.jiangstack.mytavern.domain.model.LlmConfig
 import org.jiangstack.mytavern.domain.model.QuickReply
 import org.jiangstack.mytavern.domain.model.ThemeMode
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
+import org.jiangstack.mytavern.domain.repository.ImageApiConfigRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
 import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
-
 sealed class BackupState {
     data object Idle : BackupState()
     data object Exporting : BackupState()
@@ -29,9 +30,9 @@ sealed class BackupState {
     data class Success(val message: String) : BackupState()
     data class Error(val message: String) : BackupState()
 }
-
 class SettingsViewModel(
     private val llmConfigRepository: LlmConfigRepository,
+    private val imageApiConfigRepository: ImageApiConfigRepository,
     private val characterRepository: CharacterRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val quickReplyRepository: QuickReplyRepository,
@@ -40,8 +41,13 @@ class SettingsViewModel(
 
     val configs: StateFlow<List<LlmConfig>> = llmConfigRepository.getAllConfigs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val defaultLlmConfigId: StateFlow<Long?> = userPreferencesRepository.defaultLlmConfigId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val imageApiConfigs: StateFlow<List<ImageApiConfig>> = imageApiConfigRepository.getAllConfigs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val defaultImageApiConfigId: StateFlow<Long?> = userPreferencesRepository.defaultImageApiConfigId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val themeMode: StateFlow<ThemeMode> = userPreferencesRepository.themeMode
@@ -114,6 +120,36 @@ class SettingsViewModel(
     fun setDefaultLlmConfig(id: Long?) {
         viewModelScope.launch {
             userPreferencesRepository.setDefaultLlmConfigId(id)
+        }
+    }
+
+    fun saveImageApiConfig(config: ImageApiConfig) {
+        viewModelScope.launch {
+            if (config.id == 0L) {
+                imageApiConfigRepository.insertConfig(config)
+            } else {
+                imageApiConfigRepository.updateConfig(config)
+            }
+        }
+    }
+
+    fun deleteImageApiConfig(config: ImageApiConfig) {
+        viewModelScope.launch {
+            imageApiConfigRepository.deleteConfig(config)
+        }
+    }
+
+    fun copyImageApiConfig(config: ImageApiConfig, suffix: String) {
+        viewModelScope.launch {
+            imageApiConfigRepository.insertConfig(
+                config.copy(id = 0, name = "${config.name}$suffix")
+            )
+        }
+    }
+
+    fun setDefaultImageApiConfig(id: Long?) {
+        viewModelScope.launch {
+            userPreferencesRepository.setDefaultImageApiConfigId(id)
         }
     }
 
@@ -200,6 +236,7 @@ class SettingsViewModel(
     companion object {
         fun factory(
             llmConfigRepository: LlmConfigRepository,
+            imageApiConfigRepository: ImageApiConfigRepository,
             characterRepository: CharacterRepository,
             userPreferencesRepository: UserPreferencesRepository,
             quickReplyRepository: QuickReplyRepository,
@@ -210,6 +247,7 @@ class SettingsViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return SettingsViewModel(
                         llmConfigRepository,
+                        imageApiConfigRepository,
                         characterRepository,
                         userPreferencesRepository,
                         quickReplyRepository,

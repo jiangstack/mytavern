@@ -193,6 +193,7 @@ class InteractiveGameRepositoryImpl(
         windowWordCount = windowWordCount,
         playCharacterId = playCharacterId,
         worldBookId = worldBookId,
+        backgroundImageUri = backgroundImageUri,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -206,9 +207,11 @@ class InteractiveGameRepositoryImpl(
         windowWordCount = windowWordCount,
         playCharacterId = playCharacterId,
         worldBookId = worldBookId,
+        backgroundImageUri = backgroundImageUri,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
+
 
     private fun InteractiveMessageEntity.toDomain() = InteractiveMessage(
         id = id,

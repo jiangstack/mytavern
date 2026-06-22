@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.jiangstack.mytavern.data.remote.HttpLogInterceptor
+import org.jiangstack.mytavern.data.repository.BackupRepository
 import org.jiangstack.mytavern.data.repository.HttpLogRepository
 import org.jiangstack.mytavern.data.local.AppDatabase
 import org.jiangstack.mytavern.data.local.MIGRATION_1_2
@@ -21,9 +22,13 @@ import org.jiangstack.mytavern.data.local.MIGRATION_10_11
 import org.jiangstack.mytavern.data.local.MIGRATION_11_12
 import org.jiangstack.mytavern.data.local.MIGRATION_12_13
 import org.jiangstack.mytavern.data.local.MIGRATION_13_14
+import org.jiangstack.mytavern.data.local.MIGRATION_14_15
+import org.jiangstack.mytavern.data.remote.ImageApiService
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
 import org.jiangstack.mytavern.data.repository.ChatRepositoryImpl
+import org.jiangstack.mytavern.data.repository.ImageApiConfigRepositoryImpl
+import org.jiangstack.mytavern.data.repository.InteractiveGameImageRepositoryImpl
 import org.jiangstack.mytavern.data.repository.LlmConfigRepositoryImpl
 import org.jiangstack.mytavern.data.repository.QuickReplyRepositoryImpl
 import org.jiangstack.mytavern.data.repository.SessionCharacterRepositoryImpl
@@ -33,6 +38,8 @@ import org.jiangstack.mytavern.data.repository.NovelRepositoryImpl
 import org.jiangstack.mytavern.data.repository.InteractiveGameRepositoryImpl
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
+import org.jiangstack.mytavern.domain.repository.ImageApiConfigRepository
+import org.jiangstack.mytavern.domain.repository.InteractiveGameImageRepository
 import org.jiangstack.mytavern.domain.repository.LlmConfigRepository
 import org.jiangstack.mytavern.domain.repository.QuickReplyRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
@@ -40,9 +47,10 @@ import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.repository.InteractiveGameRepository
+import org.jiangstack.mytavern.domain.service.ImageGenerationService
+import org.jiangstack.mytavern.domain.service.InteractiveStoryService
 import org.jiangstack.mytavern.domain.service.LlmService
 import org.jiangstack.mytavern.domain.service.NovelAgentService
-import org.jiangstack.mytavern.domain.service.InteractiveStoryService
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -52,7 +60,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -71,6 +79,12 @@ class AppContainer(context: Context) {
 
     val llmConfigRepository: LlmConfigRepository =
         LlmConfigRepositoryImpl(database.llmConfigDao())
+
+    val imageApiConfigRepository: ImageApiConfigRepository =
+        ImageApiConfigRepositoryImpl(database.imageApiConfigDao())
+
+    val interactiveGameImageRepository: InteractiveGameImageRepository =
+        InteractiveGameImageRepositoryImpl(database.interactiveGameImageDao())
 
     val quickReplyRepository: QuickReplyRepository =
         QuickReplyRepositoryImpl(database.quickReplyDao())
@@ -107,8 +121,19 @@ class AppContainer(context: Context) {
         .build()
         .create(LlmApiService::class.java)
 
+    val imageApiService: ImageApiService = Retrofit.Builder()
+        .baseUrl("https://api.kie.ai/")
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(ImageApiService::class.java)
+
     val llmService: LlmService by lazy {
         LlmService(llmApiService, llmConfigRepository, userPreferencesRepository, okHttpClient, json)
+    }
+
+    val imageGenerationService: ImageGenerationService by lazy {
+        ImageGenerationService(imageApiService, imageApiConfigRepository, userPreferencesRepository, interactiveGameImageRepository, interactiveGameRepository, context, okHttpClient, json)
     }
 
     val novelAgentService: NovelAgentService by lazy {

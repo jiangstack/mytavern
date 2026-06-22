@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
@@ -62,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -72,19 +74,20 @@ import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InteractiveGamePlayScreen(
     gameId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToEdit: (Long) -> Unit
+    onNavigateToEdit: (Long) -> Unit,
+    onNavigateToAlbum: (Long) -> Unit
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: InteractiveGamePlayViewModel = viewModel(
@@ -94,6 +97,8 @@ fun InteractiveGamePlayScreen(
             container.interactiveGameRepository,
             container.characterRepository,
             container.interactiveStoryService,
+            container.imageGenerationService,
+            container.interactiveGameImageRepository,
             container.userPreferencesRepository
         )
     )
@@ -108,15 +113,17 @@ fun InteractiveGamePlayScreen(
     val error by viewModel.error.collectAsState()
     val storyWordCount by viewModel.storyWordCount.collectAsState()
     val contextBoundaryIndex by viewModel.contextBoundaryIndex.collectAsState()
-    val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
-    val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
     val checkpoints by viewModel.checkpoints.collectAsState()
     val checkpointLoaded by viewModel.checkpointLoaded.collectAsState()
-
+    val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
+    val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
+    val imageGenState by viewModel.imageGenState.collectAsState()
+    val snackbarMessage by viewModel.snackbarMessage.collectAsState()
 
     var customAction by remember { mutableStateOf("") }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showCheckpointSheet by remember { mutableStateOf(false) }
+    var showImageGenerateDialog by remember { mutableStateOf(false) }
     var checkpointToRename by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
     var checkpointToDelete by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
     var selectedCharacterId by remember { mutableStateOf<Long?>(null) }
@@ -142,12 +149,19 @@ fun InteractiveGamePlayScreen(
             viewModel.clearError()
         }
     }
-
     // Show checkpoint loaded snackbar
     LaunchedEffect(checkpointLoaded) {
         checkpointLoaded?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearCheckpointLoaded()
+        }
+    }
+
+    // Show image saved/background snackbar
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSnackbarMessage()
         }
     }
 
@@ -164,6 +178,9 @@ fun InteractiveGamePlayScreen(
                 actions = {
                     IconButton(onClick = { onNavigateToEdit(gameId) }) {
                         Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.interactive_edit_title))
+                    }
+                    IconButton(onClick = { showImageGenerateDialog = true }) {
+                        Icon(Icons.Default.Image, contentDescription = stringResource(R.string.interactive_generate_image))
                     }
                     IconButton(onClick = { showSettingsSheet = true }) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.interactive_settings))
@@ -182,42 +199,38 @@ fun InteractiveGamePlayScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Story content area
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val displayedMessages = messages.filter { it.role != "user" }
-                itemsIndexed(displayedMessages) { index, msg ->
-                    StoryParagraph(
-                        message = msg,
-                        isContextBoundary = index == contextBoundaryIndex,
-                        dialogueEnabled = dialogueHighlightEnabled,
-                        dialogueColor = if (dialogueHighlightEnabled) Color(dialogueHighlightColor) else Color.Unspecified,
-                        characterNameColor = characterNameColor,
-                        characterNames = characterNames,
-                        onCharacterClick = { selectedCharacterId = it }
-                    )
-                }
+            game?.backgroundImageUri?.let { backgroundUri ->
+                AsyncImage(
+                    model = backgroundUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.25f
+                )
+            }
 
-                // Streaming content
-                if (currentStoryText.isNotBlank()) {
-                    item {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Story content area
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val displayedMessages = messages.filter { it.role != "user" }
+                    itemsIndexed(displayedMessages) { index, msg ->
                         StoryParagraph(
-                            message = InteractiveMessage(
-                                gameId = gameId,
-                                role = "narrator",
-                                content = currentStoryText
-                            ),
+                            message = msg,
+                            isContextBoundary = index == contextBoundaryIndex,
                             dialogueEnabled = dialogueHighlightEnabled,
                             dialogueColor = if (dialogueHighlightEnabled) Color(dialogueHighlightColor) else Color.Unspecified,
                             characterNameColor = characterNameColor,
@@ -225,94 +238,112 @@ fun InteractiveGamePlayScreen(
                             onCharacterClick = { selectedCharacterId = it }
                         )
                     }
-                }
 
-                // Loading indicator
-                if (isStreaming && currentStoryText.isBlank()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                    // Streaming content
+                    if (currentStoryText.isNotBlank()) {
+                        item {
+                            StoryParagraph(
+                                message = InteractiveMessage(
+                                    gameId = gameId,
+                                    role = "narrator",
+                                    content = currentStoryText
+                                ),
+                                dialogueEnabled = dialogueHighlightEnabled,
+                                dialogueColor = if (dialogueHighlightEnabled) Color(dialogueHighlightColor) else Color.Unspecified,
+                                characterNameColor = characterNameColor,
+                                characterNames = characterNames,
+                                onCharacterClick = { selectedCharacterId = it }
+                            )
+                        }
+                    }
+
+                    // Loading indicator
+                    if (isStreaming && currentStoryText.isBlank()) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }
-            }
 
-            // Action options and custom input area
-            if (!isStreaming) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    CustomActionInput(
-                        value = customAction,
-                        onValueChange = { customAction = it },
-                        onSend = {
-                            if (customAction.isNotBlank()) {
-                                viewModel.startNewTurn(customAction)
-                                customAction = ""
+                // Action options and custom input area
+                if (!isStreaming) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        CustomActionInput(
+                            value = customAction,
+                            onValueChange = { customAction = it },
+                            onSend = {
+                                if (customAction.isNotBlank()) {
+                                    viewModel.startNewTurn(customAction)
+                                    customAction = ""
+                                }
                             }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (actionOptions.isNotEmpty()) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                actionOptions.forEach { option ->
+                                    OutlinedButton(
+                                        onClick = { viewModel.startNewTurn(option) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(option)
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (actionOptions.isNotEmpty()) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            actionOptions.forEach { option ->
-                                OutlinedButton(
-                                    onClick = { viewModel.startNewTurn(option) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(option)
+                            Text(
+                                text = stringResource(R.string.interactive_story_word_count, storyWordCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(onClick = { showCheckpointSheet = true }) {
+                                    Icon(Icons.Default.Save, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(stringResource(R.string.interactive_checkpoints))
+                                }
+                                FilledTonalButton(onClick = { viewModel.continueStory() }) {
+                                    Icon(Icons.Default.SkipNext, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(stringResource(R.string.interactive_continue))
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                } else {
+                    // Stop button during streaming
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = stringResource(R.string.interactive_story_word_count, storyWordCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(onClick = { showCheckpointSheet = true }) {
-                                Icon(Icons.Default.Save, contentDescription = null)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.interactive_checkpoints))
-                            }
-                            FilledTonalButton(onClick = { viewModel.continueStory() }) {
-                                Icon(Icons.Default.SkipNext, contentDescription = null)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.interactive_continue))
-                            }
+                        TextButton(onClick = { viewModel.stopStreaming() }) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.interactive_stop))
                         }
-                    }
-                }
-            } else {
-                // Stop button during streaming
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    TextButton(onClick = { viewModel.stopStreaming() }) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.interactive_stop))
                     }
                 }
             }
@@ -340,7 +371,11 @@ fun InteractiveGamePlayScreen(
                 showSettingsSheet = false
             },
             onClearStory = { viewModel.clearStory() },
-            onClearGameState = { viewModel.clearGameStateFields() }
+            onClearGameState = { viewModel.clearGameStateFields() },
+            onNavigateToAlbum = {
+                showSettingsSheet = false
+                onNavigateToAlbum(gameId)
+            }
         )
     }
 
@@ -377,6 +412,43 @@ fun InteractiveGamePlayScreen(
             onConfirm = {
                 viewModel.deleteCheckpoint(checkpoint)
                 checkpointToDelete = null
+            }
+        )
+    }
+
+    // Image generate dialog
+    if (showImageGenerateDialog) {
+        val defaultPrompt = buildString {
+            val env = gameState?.environment?.trim() ?: ""
+            val status = gameState?.characterStatus?.trim() ?: ""
+            if (env.isNotBlank()) append(env)
+            if (status.isNotBlank()) {
+                if (isNotBlank()) append("，")
+                append(status)
+            }
+            if (isBlank()) append(game?.title ?: "")
+        }
+        val defaultParams = "{\"aspect_ratio\":\"9:16\"}"
+
+        ImageGenerateDialog(
+            initialPrompt = defaultPrompt,
+            initialParamsJson = defaultParams,
+            imageGenState = imageGenState,
+            onDismiss = {
+                viewModel.cancelImageGeneration()
+                showImageGenerateDialog = false
+            },
+            onGenerate = { prompt, paramsJson ->
+                viewModel.generateImage(prompt, paramsJson)
+            },
+            onSave = { url ->
+                viewModel.saveImageToAlbum(url)
+            },
+            onSetBackground = { url ->
+                viewModel.setAsBackground(url)
+            },
+            onRetry = { prompt, paramsJson ->
+                viewModel.generateImage(prompt, paramsJson)
             }
         )
     }
@@ -632,28 +704,6 @@ private fun CharacterInfoDialog(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
-                gameState?.let { state ->
-                    if (state.environment.isNotBlank()) {
-                        Text(
-                            text = stringResource(R.string.interactive_environment) + "：" + state.environment,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                    if (state.characterStatus.isNotBlank()) {
-                        Text(
-                            text = stringResource(R.string.interactive_character_status) + "：" + state.characterStatus,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                    if (state.characterItems.isNotBlank()) {
-                        Text(
-                            text = stringResource(R.string.interactive_character_items) + "：" + state.characterItems,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
             }
         }
     )
@@ -666,7 +716,8 @@ private fun SettingsBottomSheet(
     onDismiss: () -> Unit,
     onSave: (environment: String, characterStatus: String, characterItems: String) -> Unit,
     onClearStory: () -> Unit,
-    onClearGameState: () -> Unit
+    onClearGameState: () -> Unit,
+    onNavigateToAlbum: () -> Unit
 ) {
     var environment by remember(gameState) { mutableStateOf(gameState?.environment ?: "") }
     var characterStatus by remember(gameState) { mutableStateOf(gameState?.characterStatus ?: "") }
@@ -775,6 +826,13 @@ private fun SettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            TextButton(
+                onClick = onNavigateToAlbum
+            ) {
+                Icon(Icons.Default.Image, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.image_album_title))
+            }
             TextButton(
                 onClick = { showClearConfirm = true },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)

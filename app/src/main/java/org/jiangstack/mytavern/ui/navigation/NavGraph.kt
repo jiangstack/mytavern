@@ -15,6 +15,7 @@ import org.jiangstack.mytavern.ui.chat.AgentChatScreen
 import org.jiangstack.mytavern.ui.chat.ChatDetailScreen
 import org.jiangstack.mytavern.ui.settings.ChatSettingsScreen
 import org.jiangstack.mytavern.ui.settings.HttpLogScreen
+import org.jiangstack.mytavern.ui.settings.ImageApiSettingsScreen
 import org.jiangstack.mytavern.ui.settings.LlmSettingsScreen
 import org.jiangstack.mytavern.ui.settings.UsageStatsScreen
 import org.jiangstack.mytavern.ui.settings.NovelPromptSettingsScreen
@@ -23,10 +24,11 @@ import org.jiangstack.mytavern.ui.worldbook.WorldBookDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelListScreen
 import org.jiangstack.mytavern.ui.novel.NovelDetailScreen
 import org.jiangstack.mytavern.ui.novel.NovelChapterEditScreen
-import org.jiangstack.mytavern.ui.novel.NovelCharacterItemsScreen
 import org.jiangstack.mytavern.ui.interactive.InteractiveGameListScreen
+import org.jiangstack.mytavern.ui.novel.NovelCharacterItemsScreen
 import org.jiangstack.mytavern.ui.interactive.InteractiveGameEditScreen
 import org.jiangstack.mytavern.ui.interactive.InteractiveGamePlayScreen
+import org.jiangstack.mytavern.ui.interactive.InteractiveGameAlbumScreen
 import org.jiangstack.mytavern.ui.interactive.InteractivePromptSettingsScreen
 
 @Composable
@@ -150,7 +152,6 @@ fun NavGraph(
                 }
             )
         }
-
         composable(Screen.InteractiveGamePlay.route) { backStackEntry ->
             val gameId = backStackEntry.arguments?.getString("gameId")?.toLongOrNull() ?: 0L
             InteractiveGamePlayScreen(
@@ -158,6 +159,9 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToEdit = { gameId ->
                     navController.navigate(Screen.InteractiveGameDetail.createRoute(gameId))
+                },
+                onNavigateToAlbum = { gameId ->
+                    navController.navigate(Screen.InteractiveGameAlbum.createRoute(gameId))
                 }
             )
         }
@@ -167,10 +171,10 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateToLlmSettings = {
+
                     navController.navigate(Screen.LlmSettings.route)
                 },
                 onNavigateToChatSettings = {
@@ -185,14 +189,31 @@ fun NavGraph(
                 onNavigateToNovelPromptSettings = {
                     navController.navigate(Screen.NovelPromptSettings.route)
                 },
+                onNavigateToImageApiSettings = {
+                    navController.navigate(Screen.ImageApiSettings.route)
+                },
                 onNavigateToUsageStats = {
                     navController.navigate(Screen.UsageStats.route)
                 }
             )
         }
 
+        composable(Screen.InteractiveGameAlbum.route) { backStackEntry ->
+            val gameId = backStackEntry.arguments?.getString("gameId")?.toLongOrNull() ?: 0L
+            InteractiveGameAlbumScreen(
+                gameId = gameId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Screen.LlmSettings.route) {
             LlmSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ImageApiSettings.route) {
+            ImageApiSettingsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

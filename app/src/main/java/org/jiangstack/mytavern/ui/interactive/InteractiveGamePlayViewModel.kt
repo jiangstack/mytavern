@@ -16,20 +16,24 @@ import org.jiangstack.mytavern.domain.model.Character
 import org.jiangstack.mytavern.domain.model.InteractiveCheckpoint
 import org.jiangstack.mytavern.domain.model.InteractiveCheckpointSnapshot
 import org.jiangstack.mytavern.domain.model.InteractiveGame
+import org.jiangstack.mytavern.domain.model.InteractiveGameImage
 import org.jiangstack.mytavern.domain.model.InteractiveGameState
 import org.jiangstack.mytavern.domain.model.InteractiveMessage
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
+import org.jiangstack.mytavern.domain.repository.InteractiveGameImageRepository
 import org.jiangstack.mytavern.domain.repository.InteractiveGameRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
+import org.jiangstack.mytavern.domain.service.ImageGenerationService
 import org.jiangstack.mytavern.domain.service.InteractiveStoryService
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
 class InteractiveGamePlayViewModel(
     private val gameId: Long,
     private val gameRepository: InteractiveGameRepository,
     private val characterRepository: CharacterRepository,
     private val storyService: InteractiveStoryService,
+    private val imageGenerationService: ImageGenerationService,
+    private val imageRepository: InteractiveGameImageRepository,
     userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -59,6 +63,19 @@ class InteractiveGamePlayViewModel(
 
     private val _checkpointLoaded = MutableStateFlow<String?>(null)
     val checkpointLoaded: StateFlow<String?> = _checkpointLoaded.asStateFlow()
+
+    private val _imageGenState = MutableStateFlow<ImageGenState>(ImageGenState.Idle)
+    val imageGenState: StateFlow<ImageGenState> = _imageGenState.asStateFlow()
+
+    sealed class ImageGenState {
+        data object Idle : ImageGenState()
+        data object Loading : ImageGenState()
+        data class Success(val urls: List<String>) : ImageGenState()
+        data class Error(val message: String) : ImageGenState()
+    }
+
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
     val checkpoints: StateFlow<List<InteractiveCheckpoint>> =
         gameRepository.getCheckpointsByGameId(gameId)
@@ -319,6 +336,62 @@ class InteractiveGamePlayViewModel(
             _gameState.value = cleared
         }
     }
+    private var imageGenerationJob: Job? = null
+
+    fun generateImage(prompt: String, paramsJson: String) {
+        val currentGame = _game.value ?: return
+        imageGenerationJob?.cancel()
+        imageGenerationJob = viewModelScope.launch {
+            _imageGenState.value = ImageGenState.Loading
+            val result = imageGenerationService.submitAndPoll(
+                game = currentGame,
+                gameState = _gameState.value,
+                prompt = prompt,
+                paramsJson = paramsJson
+            )
+            _imageGenState.value = result.fold(
+                onSuccess = { ImageGenState.Success(it) },
+                onFailure = { ImageGenState.Error(it.message ?: "生成失败") }
+            )
+        }
+    }
+
+    fun cancelImageGeneration() {
+        imageGenerationJob?.cancel()
+        imageGenerationJob = null
+        _imageGenState.value = ImageGenState.Idle
+    }
+
+    fun resetImageGenState() {
+        _imageGenState.value = ImageGenState.Idle
+    }
+    fun saveImageToAlbum(url: String) {
+        viewModelScope.launch {
+            imageGenerationService.downloadImage(gameId, url).fold(
+                onSuccess = { _snackbarMessage.value = "已保存到相册" },
+                onFailure = { _error.value = it.message ?: "保存失败" }
+            )
+        }
+    }
+
+    fun setAsBackground(url: String) {
+        viewModelScope.launch {
+            val currentGame = _game.value ?: return@launch
+            val downloadResult = imageGenerationService.downloadImage(gameId, url)
+            downloadResult.fold(
+                onSuccess = { image ->
+                    imageGenerationService.setGameBackground(currentGame, image)
+                    _game.value = currentGame.copy(backgroundImageUri = image.localUri)
+                    _snackbarMessage.value = "已设为背景"
+                },
+                onFailure = { _error.value = it.message ?: "下载失败" }
+            )
+        }
+    }
+
+    fun clearSnackbarMessage() {
+        _snackbarMessage.value = null
+    }
 
     suspend fun getCharacterById(id: Long): Character? {
         return characterRepository.getCharacterById(id)
@@ -330,6 +403,8 @@ class InteractiveGamePlayViewModel(
             gameRepository: InteractiveGameRepository,
             characterRepository: CharacterRepository,
             storyService: InteractiveStoryService,
+            imageGenerationService: ImageGenerationService,
+            imageRepository: InteractiveGameImageRepository,
             userPreferencesRepository: UserPreferencesRepository
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
@@ -340,6 +415,8 @@ class InteractiveGamePlayViewModel(
                         gameRepository,
                         characterRepository,
                         storyService,
+                        imageGenerationService,
+                        imageRepository,
                         userPreferencesRepository
                     ) as T
                 }

@@ -37,6 +37,9 @@ sealed class Screen(val route: String) {
     data object InteractiveGamePlay : Screen("interactive_game_play/{gameId}") {
         fun createRoute(gameId: Long) = "interactive_game_play/$gameId"
     }
+    data object InteractiveGameAlbum : Screen("interactive_game_album/{gameId}") {
+        fun createRoute(gameId: Long) = "interactive_game_album/$gameId"
+    }
     data object InteractivePromptSettings : Screen("interactive_prompt_settings")
 
     data object Settings : Screen("settings")
@@ -44,6 +47,7 @@ sealed class Screen(val route: String) {
     data object ChatSettings : Screen("chat_settings")
     data object QuickReplySettings : Screen("quick_reply_settings")
     data object NovelPromptSettings : Screen("novel_prompt_settings")
+    data object ImageApiSettings : Screen("image_api_settings")
     data object UsageStats : Screen("usage_stats")
     data object HttpLog : Screen("http_log")
 }

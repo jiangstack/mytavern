@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -72,12 +73,14 @@ fun SettingsScreen(
     onNavigateToQuickReplySettings: () -> Unit = {},
     onNavigateToHttpLog: () -> Unit = {},
     onNavigateToNovelPromptSettings: () -> Unit = {},
+    onNavigateToImageApiSettings: () -> Unit = {},
     onNavigateToUsageStats: () -> Unit = {}
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
     val viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(
             container.llmConfigRepository,
+            container.imageApiConfigRepository,
             container.characterRepository,
             container.userPreferencesRepository,
             container.quickReplyRepository,
@@ -433,10 +436,9 @@ fun SettingsScreen(
                     }
                 }
             }
-
             item {
                 Text(
-                    text = stringResource(R.string.settings_section_quick_reply),
+                    text = stringResource(R.string.settings_section_image),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -449,7 +451,7 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    onClick = onNavigateToQuickReplySettings
+                    onClick = onNavigateToImageApiSettings
                 ) {
                     Row(
                         modifier = Modifier
@@ -458,18 +460,27 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = Icons.Default.Image,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Column(modifier = Modifier.padding(start = 16.dp)) {
                             Text(
-                                text = stringResource(R.string.settings_section_quick_reply),
+                                text = stringResource(R.string.image_api_settings_title),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
                 }
+            }
+
+            item {
+                Text(
+                    text = stringResource(R.string.settings_section_quick_reply),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
             }
 
             item {

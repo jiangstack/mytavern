@@ -26,9 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,12 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jiangstack.mytavern.MyTavernApplication
 import org.jiangstack.mytavern.R
-import org.jiangstack.mytavern.domain.model.ApiType
-import org.jiangstack.mytavern.domain.model.LlmConfig
+import org.jiangstack.mytavern.domain.model.ImageApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LlmSettingsScreen(
+fun ImageApiSettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val container = (LocalContext.current.applicationContext as MyTavernApplication).container
@@ -66,18 +62,18 @@ fun LlmSettingsScreen(
         )
     )
 
-    val configs by viewModel.configs.collectAsState()
-    val defaultLlmConfigId by viewModel.defaultLlmConfigId.collectAsState()
+    val configs by viewModel.imageApiConfigs.collectAsState()
+    val defaultImageApiConfigId by viewModel.defaultImageApiConfigId.collectAsState()
 
-    var showLlmEditDialog by remember { mutableStateOf(false) }
-    var editingLlmConfig by remember { mutableStateOf<LlmConfig?>(null) }
-    var showLlmDeleteDialog by remember { mutableStateOf(false) }
-    var llmConfigToDelete by remember { mutableStateOf<LlmConfig?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingConfig by remember { mutableStateOf<ImageApiConfig?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var configToDelete by remember { mutableStateOf<ImageApiConfig?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_section_llm)) },
+                title = { Text(stringResource(R.string.image_api_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -90,10 +86,10 @@ fun LlmSettingsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                editingLlmConfig = null
-                showLlmEditDialog = true
+                editingConfig = null
+                showEditDialog = true
             }) {
-                Icon(Icons.Default.Add, contentDescription = "Add LLM Config")
+                Icon(Icons.Default.Add, contentDescription = "Add Image API Config")
             }
         }
     ) { innerPadding ->
@@ -110,7 +106,7 @@ fun LlmSettingsScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.llm_config_list_empty),
+                            text = stringResource(R.string.image_api_config_list_empty),
                             modifier = Modifier.padding(16.dp),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -118,24 +114,24 @@ fun LlmSettingsScreen(
                     }
                 }
             } else {
-                items(configs, key = { "llm_${it.id}" }) { config ->
+                items(configs, key = { "image_api_${it.id}" }) { config ->
                     val copySuffix = stringResource(R.string.llm_config_copy_suffix)
-                    LlmConfigItem(
+                    ImageApiConfigItem(
                         config = config,
-                        isDefault = config.id == defaultLlmConfigId,
+                        isDefault = config.id == defaultImageApiConfigId,
                         onClick = {
-                            editingLlmConfig = config
-                            showLlmEditDialog = true
+                            editingConfig = config
+                            showEditDialog = true
                         },
                         onLongClick = {
-                            llmConfigToDelete = config
-                            showLlmDeleteDialog = true
+                            configToDelete = config
+                            showDeleteDialog = true
                         },
                         onSetDefault = {
-                            viewModel.setDefaultLlmConfig(config.id)
+                            viewModel.setDefaultImageApiConfig(config.id)
                         },
                         onCopy = {
-                            viewModel.copyConfig(config, copySuffix)
+                            viewModel.copyImageApiConfig(config, copySuffix)
                         }
                     )
                 }
@@ -143,42 +139,42 @@ fun LlmSettingsScreen(
         }
     }
 
-    if (showLlmEditDialog) {
-        LlmConfigEditDialog(
-            config = editingLlmConfig,
-            onDismiss = { showLlmEditDialog = false },
+    if (showEditDialog) {
+        ImageApiConfigEditDialog(
+            config = editingConfig,
+            onDismiss = { showEditDialog = false },
             onConfirm = { config ->
-                viewModel.saveConfig(config)
-                showLlmEditDialog = false
+                viewModel.saveImageApiConfig(config)
+                showEditDialog = false
             }
         )
     }
 
-    if (showLlmDeleteDialog && llmConfigToDelete != null) {
+    if (showDeleteDialog && configToDelete != null) {
         AlertDialog(
-            onDismissRequest = { showLlmDeleteDialog = false },
-            title = { Text(stringResource(R.string.llm_config_delete_title)) },
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.image_api_config_delete_title)) },
             text = {
                 Text(
                     stringResource(
-                        R.string.llm_config_delete_message,
-                        llmConfigToDelete!!.name
+                        R.string.image_api_config_delete_message,
+                        configToDelete!!.name
                     )
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteConfig(llmConfigToDelete!!)
-                        showLlmDeleteDialog = false
-                        llmConfigToDelete = null
+                        viewModel.deleteImageApiConfig(configToDelete!!)
+                        showDeleteDialog = false
+                        configToDelete = null
                     }
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLlmDeleteDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -188,8 +184,8 @@ fun LlmSettingsScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LlmConfigItem(
-    config: LlmConfig,
+private fun ImageApiConfigItem(
+    config: ImageApiConfig,
     isDefault: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -213,22 +209,13 @@ private fun LlmConfigItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = config.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    if (!config.customParams.isNullOrBlank()) {
-                        Text(
-                            text = " ●",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                Text(
+                    text = config.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${config.apiType.name} | ${config.model}",
+                    text = config.model,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -244,13 +231,13 @@ private fun LlmConfigItem(
 
             if (isDefault) {
                 Text(
-                    text = stringResource(R.string.llm_config_default_label),
+                    text = stringResource(R.string.image_api_config_default_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             } else {
                 TextButton(onClick = onSetDefault) {
-                    Text(stringResource(R.string.llm_config_set_default))
+                    Text(stringResource(R.string.image_api_config_set_default))
                 }
             }
         }
@@ -259,37 +246,24 @@ private fun LlmConfigItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LlmConfigEditDialog(
-    config: LlmConfig?,
+private fun ImageApiConfigEditDialog(
+    config: ImageApiConfig?,
     onDismiss: () -> Unit,
-    onConfirm: (LlmConfig) -> Unit
+    onConfirm: (ImageApiConfig) -> Unit
 ) {
     var name by remember { mutableStateOf(config?.name ?: "") }
-    var apiType by remember { mutableStateOf(config?.apiType ?: ApiType.OPENAI) }
-    var baseUrl by remember { mutableStateOf(config?.baseUrl ?: "") }
+    var baseUrl by remember { mutableStateOf(config?.baseUrl ?: "https://api.kie.ai/api/v1/jobs") }
     var apiKey by remember { mutableStateOf(config?.apiKey ?: "") }
-    var model by remember { mutableStateOf(config?.model ?: "") }
-    var customParams by remember { mutableStateOf(config?.customParams ?: "") }
-    val isCustomParamsValid = customParams.isBlank() || run {
-        try {
-            kotlinx.serialization.json.Json.Default.parseToJsonElement(customParams)
-            true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    val apiTypes = listOf(ApiType.OPENAI)
-    val selectedIndex = apiTypes.indexOf(apiType)
+    var model by remember { mutableStateOf(config?.model ?: "grok-imagine/text-to-image") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 if (config == null)
-                    stringResource(R.string.llm_config_create_title)
+                    stringResource(R.string.image_api_config_create_title)
                 else
-                    stringResource(R.string.llm_config_edit_title)
+                    stringResource(R.string.image_api_config_edit_title)
             )
         },
         text = {
@@ -297,36 +271,15 @@ private fun LlmConfigEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.llm_config_name)) },
+                    label = { Text(stringResource(R.string.image_api_config_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.llm_config_api_type),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    apiTypes.forEachIndexed { index, type ->
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = apiTypes.size
-                            ),
-                            onClick = { apiType = type },
-                            selected = index == selectedIndex
-                        ) {
-                            Text(type.name)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { baseUrl = it },
-                    label = { Text(stringResource(R.string.llm_config_base_url)) },
+                    label = { Text(stringResource(R.string.image_api_config_base_url)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -334,7 +287,7 @@ private fun LlmConfigEditDialog(
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
-                    label = { Text(stringResource(R.string.llm_config_api_key)) },
+                    label = { Text(stringResource(R.string.image_api_config_api_key)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -342,25 +295,9 @@ private fun LlmConfigEditDialog(
                 OutlinedTextField(
                     value = model,
                     onValueChange = { model = it },
-                    label = { Text(stringResource(R.string.llm_config_model)) },
+                    label = { Text(stringResource(R.string.image_api_config_model)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = customParams,
-                    onValueChange = { customParams = it },
-                    label = { Text(stringResource(R.string.llm_config_custom_params)) },
-                    placeholder = { Text(stringResource(R.string.llm_config_custom_params_hint)) },
-                    isError = !isCustomParamsValid,
-                    supportingText = {
-                        if (!isCustomParamsValid) {
-                            Text(stringResource(R.string.llm_config_custom_params_invalid))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 6,
-                    minLines = 3
                 )
             }
         },
@@ -368,18 +305,16 @@ private fun LlmConfigEditDialog(
             TextButton(
                 onClick = {
                     onConfirm(
-                        LlmConfig(
+                        ImageApiConfig(
                             id = config?.id ?: 0,
                             name = name,
-                            apiType = apiType,
                             baseUrl = baseUrl,
                             apiKey = apiKey,
-                            model = model,
-                            customParams = customParams.takeIf { it.isNotBlank() }
+                            model = model
                         )
                     )
                 },
-                enabled = name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank() && isCustomParamsValid
+                enabled = name.isNotBlank() && baseUrl.isNotBlank() && apiKey.isNotBlank() && model.isNotBlank()
             ) {
                 Text(stringResource(R.string.save))
             }

@@ -10,6 +10,7 @@ data class InteractiveGame(
     val playCharacterId: Long,
     val worldBookId: Long? = null,
     val characterIds: List<Long> = emptyList(),
+    val backgroundImageUri: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

@@ -270,4 +270,33 @@
     <string name="cancel">取消</string>
     <string name="save">保存</string>
     <string name="close">关闭</string>
+
+    <!-- Image -->
+    <string name="settings_section_image">图像</string>
+    <string name="image_api_settings_title">图像 API 设置</string>
+    <string name="image_api_config_create_title">创建图像 API 配置</string>
+    <string name="image_api_config_edit_title">编辑图像 API 配置</string>
+    <string name="image_api_config_name">名称</string>
+    <string name="image_api_config_base_url">Base URL</string>
+    <string name="image_api_config_api_key">API Key</string>
+    <string name="image_api_config_model">模型名称</string>
+    <string name="image_api_config_list_empty">暂无图像 API 配置</string>
+    <string name="image_api_config_default_label">默认</string>
+    <string name="image_api_config_set_default">设为默认</string>
+    <string name="image_api_config_delete_title">删除配置</string>
+    <string name="image_api_config_delete_message">确定要删除 \"%1$s\" 吗？</string>
+    <string name="interactive_generate_image">图像生成</string>
+    <string name="image_generate_title">生成图像</string>
+    <string name="image_generate_prompt">提示词</string>
+    <string name="image_generate_params">其他参数（JSON）</string>
+    <string name="image_generate_params_invalid">请输入有效的 JSON 对象</string>
+    <string name="image_generate_generating">生成中…</string>
+    <string name="image_generate_save">保存到相册</string>
+    <string name="image_generate_set_background">设为背景</string>
+    <string name="image_generate_retry">重试</string>
+    <string name="image_generate_error_no_config">请先配置默认图像 API</string>
+    <string name="image_album_title">游戏相册</string>
+    <string name="image_album_empty">暂无保存的图片</string>
+    <string name="image_saved">已保存到相册</string>
+    <string name="image_set_background_success">已设为背景</string>
 </resources>

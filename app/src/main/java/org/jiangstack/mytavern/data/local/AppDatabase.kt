@@ -2,6 +2,8 @@ package org.jiangstack.mytavern.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import org.jiangstack.mytavern.data.local.dao.ImageApiConfigDao
+import org.jiangstack.mytavern.data.local.dao.InteractiveGameImageDao
 import org.jiangstack.mytavern.data.local.dao.CharacterDao
 import org.jiangstack.mytavern.data.local.dao.ChatMessageDao
 import org.jiangstack.mytavern.data.local.dao.ChatSessionDao
@@ -20,6 +22,8 @@ import org.jiangstack.mytavern.data.local.dao.SessionCharacterDao
 import org.jiangstack.mytavern.data.local.dao.SessionStateDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookRuleDao
+import org.jiangstack.mytavern.data.local.entity.ImageApiConfigEntity
+import org.jiangstack.mytavern.data.local.entity.InteractiveGameImageEntity
 import org.jiangstack.mytavern.data.local.entity.CharacterEntity
 import org.jiangstack.mytavern.data.local.entity.ChatMessageEntity
 import org.jiangstack.mytavern.data.local.entity.ChatSessionEntity
@@ -58,9 +62,11 @@ import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
         InteractiveGameCharacterEntity::class,
         InteractiveMessageEntity::class,
         InteractiveGameStateEntity::class,
-        InteractiveCheckpointEntity::class
+        InteractiveCheckpointEntity::class,
+        ImageApiConfigEntity::class,
+        InteractiveGameImageEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -82,4 +88,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun interactiveMessageDao(): InteractiveMessageDao
     abstract fun interactiveGameStateDao(): InteractiveGameStateDao
     abstract fun interactiveCheckpointDao(): InteractiveCheckpointDao
+    abstract fun imageApiConfigDao(): ImageApiConfigDao
+    abstract fun interactiveGameImageDao(): InteractiveGameImageDao
 }

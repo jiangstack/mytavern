@@ -48,6 +48,7 @@ class UserPreferencesRepositoryImpl(
     }
     private val defaultUserCharacterIdKey = longPreferencesKey("default_user_character_id")
     private val defaultLlmConfigIdKey = longPreferencesKey("default_llm_config_id")
+    private val defaultImageApiConfigIdKey = longPreferencesKey("default_image_api_config_id")
     private val themeModeKey = intPreferencesKey("theme_mode")
     private val chatHistoryCountKey = intPreferencesKey("chat_history_count")
     private val temperatureKey = floatPreferencesKey("temperature")
@@ -79,13 +80,27 @@ class UserPreferencesRepositoryImpl(
         .map { preferences ->
             preferences[defaultLlmConfigIdKey]
         }
-
     override suspend fun setDefaultLlmConfigId(id: Long?) {
         context.dataStore.edit { preferences ->
             if (id != null) {
                 preferences[defaultLlmConfigIdKey] = id
             } else {
                 preferences.remove(defaultLlmConfigIdKey)
+            }
+        }
+    }
+
+    override val defaultImageApiConfigId: Flow<Long?> = context.dataStore.data
+        .map { preferences ->
+            preferences[defaultImageApiConfigIdKey]
+        }
+
+    override suspend fun setDefaultImageApiConfigId(id: Long?) {
+        context.dataStore.edit { preferences ->
+            if (id != null) {
+                preferences[defaultImageApiConfigIdKey] = id
+            } else {
+                preferences.remove(defaultImageApiConfigIdKey)
             }
         }
     }
