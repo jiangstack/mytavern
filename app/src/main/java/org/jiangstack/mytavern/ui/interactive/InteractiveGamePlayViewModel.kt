@@ -69,7 +69,7 @@ class InteractiveGamePlayViewModel(
 
     sealed class ImageGenState {
         data object Idle : ImageGenState()
-        data object Loading : ImageGenState()
+        data class Loading(val attempt: Int = 0, val maxAttempts: Int = 12) : ImageGenState()
         data class Success(val urls: List<String>) : ImageGenState()
         data class Error(val message: String) : ImageGenState()
     }
@@ -342,12 +342,15 @@ class InteractiveGamePlayViewModel(
         val currentGame = _game.value ?: return
         imageGenerationJob?.cancel()
         imageGenerationJob = viewModelScope.launch {
-            _imageGenState.value = ImageGenState.Loading
+            _imageGenState.value = ImageGenState.Loading(attempt = 0, maxAttempts = 12)
             val result = imageGenerationService.submitAndPoll(
                 game = currentGame,
                 gameState = _gameState.value,
                 prompt = prompt,
-                paramsJson = paramsJson
+                paramsJson = paramsJson,
+                onProgress = { attempt, maxAttempts ->
+                    _imageGenState.value = ImageGenState.Loading(attempt, maxAttempts)
+                }
             )
             _imageGenState.value = result.fold(
                 onSuccess = { ImageGenState.Success(it) },

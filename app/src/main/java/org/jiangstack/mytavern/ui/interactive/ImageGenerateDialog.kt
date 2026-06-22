@@ -50,6 +50,7 @@ fun ImageGenerateDialog(
     initialParamsJson: String,
     imageGenState: ImageGenState,
     onDismiss: () -> Unit,
+    onCancel: () -> Unit,
     onGenerate: (prompt: String, paramsJson: String) -> Unit,
     onSave: (url: String) -> Unit,
     onSetBackground: (url: String) -> Unit,
@@ -117,13 +118,25 @@ fun ImageGenerateDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp),
+                                .height(140.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator()
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(stringResource(R.string.image_generate_generating))
+                                if (imageGenState.attempt > 0) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "第 ${imageGenState.attempt}/${imageGenState.maxAttempts} 次轮询",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TextButton(onClick = onCancel) {
+                                    Text(stringResource(R.string.cancel))
+                                }
                             }
                         }
                     }

@@ -45,7 +45,8 @@ class ImageGenerationService(
         game: InteractiveGame,
         gameState: InteractiveGameState?,
         prompt: String,
-        paramsJson: String
+        paramsJson: String,
+        onProgress: (suspend (attempt: Int, maxAttempts: Int) -> Unit)? = null
     ): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
             val config = getDefaultConfig()
@@ -73,10 +74,10 @@ class ImageGenerationService(
 
             val taskData = createResponse.data
             val recordUrl = "${config.baseUrl.trimEnd('/')}/recordInfo"
-            val maxAttempts = 12
+            val maxAttempts = 32
             val pollIntervalMs = 10_000L
-
             for (attempt in 1..maxAttempts) {
+                onProgress?.invoke(attempt, maxAttempts)
                 delay(pollIntervalMs)
 
                 val recordResponse = imageApiService.getRecordInfo(
@@ -107,7 +108,7 @@ class ImageGenerationService(
             }
 
 
-            Result.failure(IllegalStateException("生成超时（12 次轮询后仍未完成），请稍后再试"))
+            Result.failure(IllegalStateException("生成超时（x次轮询后仍未完成），请稍后再试"))
         } catch (e: Exception) {
             Log.e("ImageGenerationService", "submitAndPoll failed", e)
             Result.failure(Exception("图像生成请求失败: ${e.message ?: "未知错误"}。请在设置-http日志中查看详细请求信息。", e))

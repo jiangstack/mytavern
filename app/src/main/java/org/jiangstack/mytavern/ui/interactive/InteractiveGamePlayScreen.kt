@@ -165,6 +165,13 @@ fun InteractiveGamePlayScreen(
         }
     }
 
+    // Auto-reopen image generate dialog when generation completes
+    LaunchedEffect(imageGenState) {
+        if (imageGenState is InteractiveGamePlayViewModel.ImageGenState.Success) {
+            showImageGenerateDialog = true
+        }
+    }
+
     Scaffold(
         modifier = Modifier.imePadding(),
         topBar = {
@@ -435,6 +442,12 @@ fun InteractiveGamePlayScreen(
             initialParamsJson = defaultParams,
             imageGenState = imageGenState,
             onDismiss = {
+                showImageGenerateDialog = false
+                if (imageGenState !is InteractiveGamePlayViewModel.ImageGenState.Loading) {
+                    viewModel.resetImageGenState()
+                }
+            },
+            onCancel = {
                 viewModel.cancelImageGeneration()
                 showImageGenerateDialog = false
             },
