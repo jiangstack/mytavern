@@ -284,6 +284,12 @@ class InteractiveGamePlayViewModel(
         }
     }
 
+    fun clearAllCheckpoints() {
+        viewModelScope.launch {
+            gameRepository.clearCheckpointsByGameId(gameId)
+        }
+    }
+
     fun clearError() {
         _error.value = null
     }

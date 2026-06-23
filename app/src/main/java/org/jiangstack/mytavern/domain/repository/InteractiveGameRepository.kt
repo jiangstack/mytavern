@@ -37,5 +37,6 @@ interface InteractiveGameRepository {
     suspend fun createCheckpoint(gameId: Long, parentId: Long?, name: String, snapshot: InteractiveCheckpointSnapshot): Long
     suspend fun updateCheckpointName(id: Long, name: String)
     suspend fun deleteCheckpoint(checkpoint: InteractiveCheckpoint)
+    suspend fun clearCheckpointsByGameId(gameId: Long)
     suspend fun loadCheckpoint(checkpointId: Long)
 }

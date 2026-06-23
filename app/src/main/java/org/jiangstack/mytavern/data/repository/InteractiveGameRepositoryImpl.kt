@@ -161,6 +161,16 @@ class InteractiveGameRepositoryImpl(
         }
     }
 
+    override suspend fun clearCheckpointsByGameId(gameId: Long) {
+        checkpointDao.deleteByGameId(gameId)
+        val currentState = gameStateDao.getByGameIdSync(gameId)
+        if (currentState != null && currentState.activeCheckpointId != null) {
+            gameStateDao.insertOrUpdate(
+                currentState.copy(activeCheckpointId = null)
+            )
+        }
+    }
+
     override suspend fun loadCheckpoint(checkpointId: Long) {
         val checkpoint = checkpointDao.getById(checkpointId) ?: return
         val snapshot = checkpoint.toDomain().snapshot

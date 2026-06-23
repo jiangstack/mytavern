@@ -25,4 +25,7 @@ interface InteractiveCheckpointDao {
 
     @Delete
     suspend fun delete(checkpoint: InteractiveCheckpointEntity)
+
+    @Query("DELETE FROM interactive_checkpoints WHERE gameId = :gameId")
+    suspend fun deleteByGameId(gameId: Long)
 }

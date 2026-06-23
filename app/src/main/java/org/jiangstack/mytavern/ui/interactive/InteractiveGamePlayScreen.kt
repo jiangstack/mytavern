@@ -56,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -123,6 +124,7 @@ fun InteractiveGamePlayScreen(
     var customAction by remember { mutableStateOf("") }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showCheckpointSheet by remember { mutableStateOf(false) }
+    var showClearAllDialog by remember { mutableStateOf(false) }
     var showImageGenerateDialog by remember { mutableStateOf(false) }
     var checkpointToRename by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
     var checkpointToDelete by remember { mutableStateOf<InteractiveCheckpoint?>(null) }
@@ -130,12 +132,24 @@ fun InteractiveGamePlayScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
+    val isAtBottom by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            if (total == 0) true
+            else {
+                val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                lastVisible >= total - 1
+            }
+        }
+    }
+
     val characterNameColor = MaterialTheme.colorScheme.primary
     val characterNames = remember(characters) { characters.map { it.name to it.id } }
 
     // Auto-scroll to bottom when new content arrives
     LaunchedEffect(messages.size, currentStoryText) {
-        if (messages.isNotEmpty() || currentStoryText.isNotBlank()) {
+        if (isAtBottom && (messages.isNotEmpty() || currentStoryText.isNotBlank())) {
             listState.animateScrollToItem(
                 if (currentStoryText.isNotBlank()) messages.size + 1 else messages.size
             )
@@ -397,7 +411,8 @@ fun InteractiveGamePlayScreen(
                 showCheckpointSheet = false
             },
             onRename = { checkpointToRename = it },
-            onDelete = { checkpointToDelete = it }
+            onDelete = { checkpointToDelete = it },
+            onClearAll = { showClearAllDialog = true }
         )
     }
 
@@ -419,6 +434,16 @@ fun InteractiveGamePlayScreen(
             onConfirm = {
                 viewModel.deleteCheckpoint(checkpoint)
                 checkpointToDelete = null
+            }
+        )
+    }
+
+    if (showClearAllDialog) {
+        ClearAllCheckpointsDialog(
+            onDismiss = { showClearAllDialog = false },
+            onConfirm = {
+                viewModel.clearAllCheckpoints()
+                showClearAllDialog = false
             }
         )
     }
@@ -888,7 +913,8 @@ private fun CheckpointBottomSheet(
     onDismiss: () -> Unit,
     onLoad: (InteractiveCheckpoint) -> Unit,
     onRename: (InteractiveCheckpoint) -> Unit,
-    onDelete: (InteractiveCheckpoint) -> Unit
+    onDelete: (InteractiveCheckpoint) -> Unit,
+    onClearAll: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val treeNodes = remember(checkpoints) { buildCheckpointTree(checkpoints) }
@@ -940,8 +966,16 @@ private fun CheckpointBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                if (treeNodes.isNotEmpty()) {
+                    TextButton(
+                        onClick = onClearAll,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.interactive_checkpoint_clear_all))
+                    }
+                }
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.close))
                 }
@@ -1184,6 +1218,31 @@ private fun DeleteCheckpointDialog(
                 )
             )
         },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun ClearAllCheckpointsDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.interactive_checkpoint_clear_all_title)) },
+        text = { Text(stringResource(R.string.interactive_checkpoint_clear_all_message)) },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,

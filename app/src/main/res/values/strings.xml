@@ -256,6 +256,9 @@
     <string name="interactive_checkpoint_delete_message">确定要删除保存点「%1$s」吗？其下所有子保存点也将被删除。</string>
     <string name="interactive_checkpoint_loaded">已加载保存点</string>
     <string name="interactive_checkpoint_name">保存点名称</string>
+    <string name="interactive_checkpoint_clear_all">清空全部</string>
+    <string name="interactive_checkpoint_clear_all_title">清空全部保存点</string>
+    <string name="interactive_checkpoint_clear_all_message">确定要清空当前游戏的所有保存点吗？此操作不可撤销。</string>
     <string name="interactive_clear_story_message">确定要清空当前故事的所有内容吗？此操作不可撤销。</string>
     <string name="interactive_clear_game_state">清空环境/人物状态/物品</string>
     <string name="interactive_clear_game_state_title">清空环境、人物状态与物品</string>
