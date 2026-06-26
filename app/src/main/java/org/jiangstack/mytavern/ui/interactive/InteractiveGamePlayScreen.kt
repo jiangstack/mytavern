@@ -949,7 +949,9 @@ private fun CheckpointBottomSheet(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
                 ) {
                     itemsIndexed(treeNodes, key = { _, node -> node.checkpoint.id }) { _, node ->
                         CheckpointTreeItem(

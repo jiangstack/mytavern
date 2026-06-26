@@ -322,6 +322,7 @@ class InteractiveGamePlayViewModel(
             _actionOptions.value = emptyList()
             _error.value = null
             gameRepository.deleteMessagesByGameId(gameId)
+            gameRepository.clearCheckpointsByGameId(gameId)
             val currentState = _gameState.value
             if (currentState != null) {
                 gameRepository.insertOrUpdateGameState(

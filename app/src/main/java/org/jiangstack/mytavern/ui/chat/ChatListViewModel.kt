@@ -17,7 +17,18 @@ import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.repository.SessionCharacterRepository
 import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import org.jiangstack.mytavern.domain.model.CharacterType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+data class ChatSessionListItem(
+    val session: ChatSession,
+    val avatarUri: String? = null
+)
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChatListViewModel(
     private val chatRepository: ChatRepository,
     private val characterRepository: CharacterRepository,
@@ -38,6 +49,53 @@ class ChatListViewModel(
 
     val novels: StateFlow<List<Novel>> = novelRepository.getAllNovels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val allCharacters: StateFlow<Map<Long, Character>> =
+        characterRepository.getAllCharacters()
+            .map { list -> list.associateBy { it.id } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    private val sessionCharacterIds: StateFlow<Map<Long, List<Long>>> = sessions
+        .flatMapLatest { sessionList ->
+            val groupSessions = sessionList.filter { it.type == SessionType.GROUP }
+            if (groupSessions.isEmpty()) {
+                flowOf(emptyMap())
+            } else {
+                combine(
+                    groupSessions.map { session ->
+                        sessionCharacterRepository.getCharactersBySessionId(session.id)
+                            .map { session.id to it }
+                    }
+                ) { entries -> entries.toMap() }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val sessionItems: StateFlow<List<ChatSessionListItem>> = combine(
+        sessions,
+        allCharacters,
+        sessionCharacterIds
+    ) { sessionList, characters, sessionChars ->
+        sessionList.map { session ->
+            val avatarUri = when (session.type) {
+                SessionType.SINGLE -> session.aiCharacterId?.let { characters[it]?.avatarUri }
+                SessionType.GROUP -> {
+                    val characterIds = sessionChars[session.id].orEmpty()
+                    characterIds.firstNotNullOfOrNull { id ->
+                        characters[id]?.takeIf { it.type != CharacterType.USER }?.avatarUri
+                    }
+                }
+                SessionType.AGENT -> null
+            }
+            ChatSessionListItem(session, avatarUri)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun updateSessionTitle(session: ChatSession, title: String) {
+        viewModelScope.launch {
+            if (title.isBlank()) return@launch
+            chatRepository.updateSession(session.copy(title = title.trim()))
+        }
+    }
 
     suspend fun createSession(aiCharacterId: Long, title: String, worldBookId: Long? = null): Long {
         val userCharacterId = userPreferencesRepository.defaultUserCharacterId

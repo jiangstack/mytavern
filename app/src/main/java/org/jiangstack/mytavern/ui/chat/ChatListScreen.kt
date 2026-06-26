@@ -13,13 +13,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -27,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -59,6 +62,11 @@ import org.jiangstack.mytavern.domain.model.ChatSession
 import org.jiangstack.mytavern.domain.model.Novel
 import org.jiangstack.mytavern.domain.model.SessionType
 import org.jiangstack.mytavern.domain.model.WorldBook
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +86,7 @@ fun ChatListScreen(
         )
     )
 
-    val sessions by viewModel.sessions.collectAsState()
+    val sessionItems by viewModel.sessionItems.collectAsState()
     val aiCharacters by viewModel.aiCharacters.collectAsState()
     val worldBooks by viewModel.worldBooks.collectAsState()
     val novels by viewModel.novels.collectAsState()
@@ -87,6 +95,9 @@ fun ChatListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var sessionToDelete by remember { mutableStateOf<ChatSession?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var sessionToEdit by remember { mutableStateOf<ChatSession?>(null) }
+    var editTitle by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -105,7 +116,7 @@ fun ChatListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (sessions.isEmpty()) {
+            if (sessionItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -121,19 +132,24 @@ fun ChatListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(sessions, key = { it.id }) { session ->
+                    items(sessionItems, key = { it.session.id }) { item ->
                         ChatSessionItem(
-                            session = session,
+                            item = item,
                             onClick = {
-                                if (session.type == SessionType.AGENT) {
-                                    onNavigateToAgentChat(session.id)
+                                if (item.session.type == SessionType.AGENT) {
+                                    onNavigateToAgentChat(item.session.id)
                                 } else {
-                                    onNavigateToChat(session.id)
+                                    onNavigateToChat(item.session.id)
                                 }
                             },
                             onLongClick = {
-                                sessionToDelete = session
+                                sessionToDelete = item.session
                                 showDeleteDialog = true
+                            },
+                            onEditClick = {
+                                sessionToEdit = item.session
+                                editTitle = item.session.title
+                                showEditDialog = true
                             }
                         )
                     }
@@ -199,15 +215,55 @@ fun ChatListScreen(
             }
         )
     }
+
+    if (showEditDialog && sessionToEdit != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showEditDialog = false
+                sessionToEdit = null
+            },
+            title = { Text(stringResource(R.string.chat_edit_title)) },
+            text = {
+                OutlinedTextField(
+                    value = editTitle,
+                    onValueChange = { editTitle = it },
+                    label = { Text(stringResource(R.string.chat_title_label)) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.updateSessionTitle(sessionToEdit!!, editTitle)
+                        showEditDialog = false
+                        sessionToEdit = null
+                    },
+                    enabled = editTitle.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showEditDialog = false
+                    sessionToEdit = null
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatSessionItem(
-    session: ChatSession,
+    item: ChatSessionListItem,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
+    val session = item.session
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,18 +279,26 @@ private fun ChatSessionItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (session.type == SessionType.AGENT) Icons.Default.SmartToy else Icons.Default.Chat,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 16.dp)
-            )
+            ChatSessionAvatar(item = item)
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = session.title,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = session.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onEditClick) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.chat_edit_title),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = when (session.type) {
@@ -248,6 +312,37 @@ private fun ChatSessionItem(
             }
         }
     }
+}
+
+@Composable
+private fun ChatSessionAvatar(item: ChatSessionListItem) {
+    val avatarUri = item.avatarUri
+    if (avatarUri != null) {
+        AsyncImage(
+            model = avatarUri,
+            contentDescription = null,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (item.session.type == SessionType.AGENT)
+                    Icons.Default.SmartToy else Icons.AutoMirrored.Filled.Chat,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+    Spacer(modifier = Modifier.width(16.dp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

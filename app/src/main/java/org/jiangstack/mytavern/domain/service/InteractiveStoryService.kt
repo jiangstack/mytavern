@@ -84,10 +84,10 @@ class InteractiveStoryService(
         val provideActionOptionsTool = Tool(
             function = ToolFunction(
                 name = "provide_action_options",
-                description = "为用户提供3-5个行动选项供选择。",
+                description = "为用户提供行动选项供选择。",
                 parameters = ToolParameters(
                     properties = mapOf(
-                        "options" to ToolProperty("string", "JSON数组，包含3-5个行动选项字符串，例如：[\"选项1\",\"选项2\",\"选项3\"]")
+                        "options" to ToolProperty("string", "JSON数组，包含3行动选项字符串，例如：[\"选项1\",\"选项2\"]")
                     ),
                     required = listOf("options")
                 )
