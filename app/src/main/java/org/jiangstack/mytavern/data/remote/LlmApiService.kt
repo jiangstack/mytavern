@@ -1,6 +1,8 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 package org.jiangstack.mytavern.data.remote
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.EncodeDefault
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -150,6 +152,7 @@ data class Delta(
 
 @kotlinx.serialization.Serializable
 data class Tool(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val type: String = "function",
     val function: ToolFunction
 )
@@ -163,6 +166,7 @@ data class ToolFunction(
 
 @kotlinx.serialization.Serializable
 data class ToolParameters(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val type: String = "object",
     val properties: Map<String, ToolProperty>,
     val required: List<String>
@@ -177,6 +181,7 @@ data class ToolProperty(
 @kotlinx.serialization.Serializable
 data class ToolCall(
     val id: String,
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val type: String = "function",
     val function: ToolCallFunction
 )
