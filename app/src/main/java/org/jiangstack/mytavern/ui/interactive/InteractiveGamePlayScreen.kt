@@ -119,6 +119,8 @@ fun InteractiveGamePlayScreen(
     val dialogueHighlightEnabled by viewModel.dialogueHighlightEnabled.collectAsState()
     val dialogueHighlightColor by viewModel.dialogueHighlightColor.collectAsState()
     val imageGenState by viewModel.imageGenState.collectAsState()
+    val lastImageGenPrompt by viewModel.lastImageGenPrompt.collectAsState()
+    val lastImageGenParams by viewModel.lastImageGenParams.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
 
     var customAction by remember { mutableStateOf("") }
@@ -450,7 +452,7 @@ fun InteractiveGamePlayScreen(
 
     // Image generate dialog
     if (showImageGenerateDialog) {
-        val defaultPrompt = buildString {
+        val fallbackPrompt = buildString {
             val env = gameState?.environment?.trim() ?: ""
             val status = gameState?.characterStatus?.trim() ?: ""
             if (env.isNotBlank()) append(env)
@@ -460,11 +462,11 @@ fun InteractiveGamePlayScreen(
             }
             if (isBlank()) append(game?.title ?: "")
         }
-        val defaultParams = "{\"aspect_ratio\":\"9:16\"}"
+        val fallbackParams = "{\"aspect_ratio\":\"9:16\"}"
 
         ImageGenerateDialog(
-            initialPrompt = defaultPrompt,
-            initialParamsJson = defaultParams,
+            initialPrompt = lastImageGenPrompt ?: fallbackPrompt,
+            initialParamsJson = lastImageGenParams ?: fallbackParams,
             imageGenState = imageGenState,
             onDismiss = {
                 showImageGenerateDialog = false

@@ -111,6 +111,10 @@ class NovelChapterEditViewModel(
     val dialogueHighlightColor: StateFlow<Long> = userPreferencesRepository.dialogueHighlightColor
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF4FC3F7L)
 
+    // 缓存上次 AI 续写的额外要求（内存暂存，关闭应用后失效）
+    var cachedCustomRequest: String = ""
+        private set
+
     private var aiJob: Job? = null
     private var autoSaveJob: Job? = null
 
@@ -174,6 +178,7 @@ class NovelChapterEditViewModel(
     }
 
     fun startAiContinue(customRequest: String) {
+        cachedCustomRequest = customRequest
         if (_isAiGenerating.value) return
         aiJob?.cancel()
         aiJob = viewModelScope.launch {

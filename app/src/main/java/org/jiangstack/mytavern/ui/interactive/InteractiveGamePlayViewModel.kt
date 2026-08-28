@@ -34,7 +34,7 @@ class InteractiveGamePlayViewModel(
     private val storyService: InteractiveStoryService,
     private val imageGenerationService: ImageGenerationService,
     private val imageRepository: InteractiveGameImageRepository,
-    userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _game = MutableStateFlow<InteractiveGame?>(null)
@@ -108,10 +108,22 @@ class InteractiveGamePlayViewModel(
     val dialogueHighlightColor: StateFlow<Long> = userPreferencesRepository.dialogueHighlightColor
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF4FC3F7L)
 
+    private val _lastImageGenPrompt = MutableStateFlow<String?>(null)
+    val lastImageGenPrompt: StateFlow<String?> = _lastImageGenPrompt.asStateFlow()
+
+    private val _lastImageGenParams = MutableStateFlow<String?>(null)
+    val lastImageGenParams: StateFlow<String?> = _lastImageGenParams.asStateFlow()
+
     private var streamingJob: Job? = null
 
     init {
         loadData()
+        viewModelScope.launch {
+            userPreferencesRepository.lastImageGenPrompt.collect { _lastImageGenPrompt.value = it }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.lastImageGenParams.collect { _lastImageGenParams.value = it }
+        }
     }
 
     private fun loadData() {
@@ -348,6 +360,10 @@ class InteractiveGamePlayViewModel(
     fun generateImage(prompt: String, paramsJson: String) {
         val currentGame = _game.value ?: return
         imageGenerationJob?.cancel()
+        viewModelScope.launch {
+            userPreferencesRepository.saveLastImageGenPrompt(prompt)
+            userPreferencesRepository.saveLastImageGenParams(paramsJson)
+        }
         imageGenerationJob = viewModelScope.launch {
             _imageGenState.value = ImageGenState.Loading(attempt = 0, maxAttempts = 12)
             val result = imageGenerationService.submitAndPoll(

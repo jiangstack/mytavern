@@ -687,6 +687,13 @@ fun NovelChapterEditScreen(
         }
     }
 
+    // AI 续写对话框打开时，从 ViewModel 恢复上次缓存的额外要求
+    LaunchedEffect(showAiDialog) {
+        if (showAiDialog) {
+            customRequest = viewModel.cachedCustomRequest
+        }
+    }
+
     // AI 续写对话框
     if (showAiDialog) {
         AiContinueDialog(
@@ -696,7 +703,6 @@ fun NovelChapterEditScreen(
             onConfirm = {
                 showAiDialog = false
                 viewModel.startAiContinue(customRequest)
-                customRequest = ""
             }
         )
     }

@@ -33,4 +33,8 @@ interface UserPreferencesRepository {
     suspend fun setDialogueHighlightEnabled(enabled: Boolean)
     val dialogueHighlightColor: Flow<Long>
     suspend fun setDialogueHighlightColor(color: Long)
+    val lastImageGenPrompt: Flow<String?>
+    suspend fun saveLastImageGenPrompt(prompt: String?)
+    val lastImageGenParams: Flow<String?>
+    suspend fun saveLastImageGenParams(params: String?)
 }

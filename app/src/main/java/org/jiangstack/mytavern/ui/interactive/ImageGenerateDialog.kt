@@ -1,5 +1,7 @@
 package org.jiangstack.mytavern.ui.interactive
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,12 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -23,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,14 +37,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import org.jiangstack.mytavern.R
 import org.jiangstack.mytavern.ui.interactive.InteractiveGamePlayViewModel.ImageGenState
@@ -59,6 +69,7 @@ fun ImageGenerateDialog(
     var prompt by remember { mutableStateOf(initialPrompt) }
     var paramsJson by remember { mutableStateOf(initialParamsJson) }
     var paramsError by remember { mutableStateOf(false) }
+    var previewIndex by remember { mutableIntStateOf(-1) }
 
     LaunchedEffect(Unit) {
         prompt = initialPrompt
@@ -158,8 +169,11 @@ fun ImageGenerateDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(imageGenState.urls, key = { it }) { url ->
+                                    val index = imageGenState.urls.indexOf(url)
                                     Card(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { previewIndex = index },
                                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                     ) {
                                         Column {
@@ -227,4 +241,96 @@ fun ImageGenerateDialog(
             }
         }
     )
+
+    if (previewIndex >= 0 && imageGenState is ImageGenState.Success) {
+        val urls = imageGenState.urls
+        Dialog(
+            onDismissRequest = { previewIndex = -1 },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f))
+            ) {
+                AsyncImage(
+                    model = urls[previewIndex],
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                IconButton(
+                    onClick = { previewIndex = -1 },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cancel),
+                        tint = Color.White
+                    )
+                }
+
+                if (previewIndex > 0) {
+                    IconButton(
+                        onClick = { previewIndex-- },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(4.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "上一张",
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+                if (previewIndex < urls.lastIndex) {
+                    IconButton(
+                        onClick = { previewIndex++ },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(4.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "下一张",
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    TextButton(
+                        onClick = { onSave(urls[previewIndex]) }
+                    ) {
+                        Text(
+                            stringResource(R.string.image_generate_save),
+                            color = Color.White
+                        )
+                    }
+                    TextButton(
+                        onClick = { onSetBackground(urls[previewIndex]) }
+                    ) {
+                        Text(
+                            stringResource(R.string.image_generate_set_background),
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

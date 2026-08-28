@@ -60,6 +60,8 @@ class UserPreferencesRepositoryImpl(
     private val interactiveMaxIterationsKey = intPreferencesKey("interactive_max_iterations")
     private val dialogueHighlightEnabledKey = booleanPreferencesKey("dialogue_highlight_enabled")
     private val dialogueHighlightColorKey = longPreferencesKey("dialogue_highlight_color")
+    private val lastImageGenPromptKey = stringPreferencesKey("last_image_gen_prompt")
+    private val lastImageGenParamsKey = stringPreferencesKey("last_image_gen_params")
 
     override val defaultUserCharacterId: Flow<Long?> = context.dataStore.data
         .map { preferences ->
@@ -276,6 +278,36 @@ class UserPreferencesRepositoryImpl(
     override suspend fun setDialogueHighlightColor(color: Long) {
         context.dataStore.edit { preferences ->
             preferences[dialogueHighlightColorKey] = color
+        }
+    }
+
+    override val lastImageGenPrompt: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[lastImageGenPromptKey]
+        }
+
+    override suspend fun saveLastImageGenPrompt(prompt: String?) {
+        context.dataStore.edit { preferences ->
+            if (prompt != null) {
+                preferences[lastImageGenPromptKey] = prompt
+            } else {
+                preferences.remove(lastImageGenPromptKey)
+            }
+        }
+    }
+
+    override val lastImageGenParams: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[lastImageGenParamsKey]
+        }
+
+    override suspend fun saveLastImageGenParams(params: String?) {
+        context.dataStore.edit { preferences ->
+            if (params != null) {
+                preferences[lastImageGenParamsKey] = params
+            } else {
+                preferences.remove(lastImageGenParamsKey)
+            }
         }
     }
 }
