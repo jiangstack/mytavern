@@ -54,6 +54,7 @@ data class ChatCompletionRequest(
 
 @kotlinx.serialization.Serializable
 data class StreamOptions(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val include_usage: Boolean = true
 )
 
