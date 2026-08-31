@@ -42,6 +42,18 @@ sealed class Screen(val route: String) {
     }
     data object InteractivePromptSettings : Screen("interactive_prompt_settings")
 
+    data object TownList : Screen("town_list")
+    data object TownEdit : Screen("town_edit/{townId}") {
+        fun createRoute(townId: Long) = "town_edit/$townId"
+    }
+    data object TownDetail : Screen("town_detail/{townId}") {
+        fun createRoute(townId: Long) = "town_detail/$townId"
+    }
+    data object TownScene : Screen("town_scene/{townId}/{sceneId}") {
+        fun createRoute(townId: Long, sceneId: Long) = "town_scene/$townId/$sceneId"
+    }
+    data object TownPromptSettings : Screen("town_prompt_settings")
+
     data object Settings : Screen("settings")
     data object LlmSettings : Screen("llm_settings")
     data object ChatSettings : Screen("chat_settings")

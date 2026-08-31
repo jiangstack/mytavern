@@ -20,6 +20,13 @@ import org.jiangstack.mytavern.data.local.dao.NovelDao
 import org.jiangstack.mytavern.data.local.dao.QuickReplyDao
 import org.jiangstack.mytavern.data.local.dao.SessionCharacterDao
 import org.jiangstack.mytavern.data.local.dao.SessionStateDao
+import org.jiangstack.mytavern.data.local.dao.TownDao
+import org.jiangstack.mytavern.data.local.dao.TownLocationDao
+import org.jiangstack.mytavern.data.local.dao.TownLogDao
+import org.jiangstack.mytavern.data.local.dao.TownMemberDao
+import org.jiangstack.mytavern.data.local.dao.TownRelationshipDao
+import org.jiangstack.mytavern.data.local.dao.TownSceneDao
+import org.jiangstack.mytavern.data.local.dao.TownSnapshotDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookDao
 import org.jiangstack.mytavern.data.local.dao.WorldBookRuleDao
 import org.jiangstack.mytavern.data.local.entity.ImageApiConfigEntity
@@ -40,6 +47,13 @@ import org.jiangstack.mytavern.data.local.entity.NovelEntity
 import org.jiangstack.mytavern.data.local.entity.QuickReplyEntity
 import org.jiangstack.mytavern.data.local.entity.SessionCharacterEntity
 import org.jiangstack.mytavern.data.local.entity.SessionStateEntity
+import org.jiangstack.mytavern.data.local.entity.TownEntity
+import org.jiangstack.mytavern.data.local.entity.TownLocationEntity
+import org.jiangstack.mytavern.data.local.entity.TownLogEntity
+import org.jiangstack.mytavern.data.local.entity.TownMemberEntity
+import org.jiangstack.mytavern.data.local.entity.TownRelationshipEntity
+import org.jiangstack.mytavern.data.local.entity.TownSceneEntity
+import org.jiangstack.mytavern.data.local.entity.TownSnapshotEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookEntity
 import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
 
@@ -64,9 +78,16 @@ import org.jiangstack.mytavern.data.local.entity.WorldBookRuleEntity
         InteractiveGameStateEntity::class,
         InteractiveCheckpointEntity::class,
         ImageApiConfigEntity::class,
-        InteractiveGameImageEntity::class
+        InteractiveGameImageEntity::class,
+        TownEntity::class,
+        TownLocationEntity::class,
+        TownMemberEntity::class,
+        TownRelationshipEntity::class,
+        TownSceneEntity::class,
+        TownLogEntity::class,
+        TownSnapshotEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -90,4 +111,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun interactiveCheckpointDao(): InteractiveCheckpointDao
     abstract fun imageApiConfigDao(): ImageApiConfigDao
     abstract fun interactiveGameImageDao(): InteractiveGameImageDao
+
+    abstract fun townDao(): TownDao
+    abstract fun townLocationDao(): TownLocationDao
+    abstract fun townMemberDao(): TownMemberDao
+    abstract fun townRelationshipDao(): TownRelationshipDao
+    abstract fun townSceneDao(): TownSceneDao
+    abstract fun townLogDao(): TownLogDao
+    abstract fun townSnapshotDao(): TownSnapshotDao
 }

@@ -23,6 +23,7 @@ import org.jiangstack.mytavern.data.local.MIGRATION_11_12
 import org.jiangstack.mytavern.data.local.MIGRATION_12_13
 import org.jiangstack.mytavern.data.local.MIGRATION_13_14
 import org.jiangstack.mytavern.data.local.MIGRATION_14_15
+import org.jiangstack.mytavern.data.local.MIGRATION_15_16
 import org.jiangstack.mytavern.data.remote.ImageApiService
 import org.jiangstack.mytavern.data.remote.LlmApiService
 import org.jiangstack.mytavern.data.repository.CharacterRepositoryImpl
@@ -36,6 +37,7 @@ import org.jiangstack.mytavern.data.repository.UserPreferencesRepositoryImpl
 import org.jiangstack.mytavern.data.repository.WorldBookRepositoryImpl
 import org.jiangstack.mytavern.data.repository.NovelRepositoryImpl
 import org.jiangstack.mytavern.data.repository.InteractiveGameRepositoryImpl
+import org.jiangstack.mytavern.data.repository.TownRepositoryImpl
 import org.jiangstack.mytavern.domain.repository.CharacterRepository
 import org.jiangstack.mytavern.domain.repository.ChatRepository
 import org.jiangstack.mytavern.domain.repository.ImageApiConfigRepository
@@ -47,10 +49,12 @@ import org.jiangstack.mytavern.domain.repository.UserPreferencesRepository
 import org.jiangstack.mytavern.domain.repository.WorldBookRepository
 import org.jiangstack.mytavern.domain.repository.NovelRepository
 import org.jiangstack.mytavern.domain.repository.InteractiveGameRepository
+import org.jiangstack.mytavern.domain.repository.TownRepository
 import org.jiangstack.mytavern.domain.service.ImageGenerationService
 import org.jiangstack.mytavern.domain.service.InteractiveStoryService
 import org.jiangstack.mytavern.domain.service.LlmService
 import org.jiangstack.mytavern.domain.service.NovelAgentService
+import org.jiangstack.mytavern.domain.service.TownSimulationService
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -60,7 +64,7 @@ class AppContainer(context: Context) {
         context,
         AppDatabase::class.java,
         "mytavern.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16).build()
 
     val userPreferencesRepository: UserPreferencesRepository =
         UserPreferencesRepositoryImpl(context)
@@ -153,5 +157,22 @@ class AppContainer(context: Context) {
 
     val interactiveStoryService: InteractiveStoryService by lazy {
         InteractiveStoryService(llmService, interactiveGameRepository, characterRepository, worldBookRepository, userPreferencesRepository, json)
+    }
+
+    val townRepository: TownRepository by lazy {
+        TownRepositoryImpl(
+            database.townDao(),
+            database.townLocationDao(),
+            database.townMemberDao(),
+            database.townRelationshipDao(),
+            database.townSceneDao(),
+            database.townLogDao(),
+            database.townSnapshotDao(),
+            json
+        )
+    }
+
+    val townSimulationService: TownSimulationService by lazy {
+        TownSimulationService(llmService, townRepository, characterRepository, userPreferencesRepository, json)
     }
 }

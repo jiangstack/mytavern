@@ -164,7 +164,8 @@ class NovelAgentService(
             conversation.add(ChatMessage(
                 sessionId = 0,
                 content = fullContent.toString(),
-                role = "assistant"
+                role = "assistant",
+                toolCalls = toolCalls
             ))
 
             for (tc in toolCalls!!) {
@@ -207,7 +208,8 @@ class NovelAgentService(
                     sessionId = 0,
                     content = result,
                     role = "tool",
-                    messageType = tc.function.name
+                    messageType = tc.function.name,
+                    toolCallId = tc.id
                 ))
             }
         }

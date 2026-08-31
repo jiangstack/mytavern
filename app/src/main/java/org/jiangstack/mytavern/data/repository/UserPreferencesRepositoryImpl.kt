@@ -58,6 +58,8 @@ class UserPreferencesRepositoryImpl(
     private val novelOutlinePromptBlocksKey = stringPreferencesKey("novel_outline_prompt_blocks")
     private val interactivePromptBlocksKey = stringPreferencesKey("interactive_prompt_blocks")
     private val interactiveMaxIterationsKey = intPreferencesKey("interactive_max_iterations")
+    private val townPromptBlocksKey = stringPreferencesKey("town_prompt_blocks")
+    private val townMaxIterationsKey = intPreferencesKey("town_max_iterations")
     private val dialogueHighlightEnabledKey = booleanPreferencesKey("dialogue_highlight_enabled")
     private val dialogueHighlightColorKey = longPreferencesKey("dialogue_highlight_color")
     private val lastImageGenPromptKey = stringPreferencesKey("last_image_gen_prompt")
@@ -256,6 +258,40 @@ class UserPreferencesRepositoryImpl(
     override suspend fun setInteractiveMaxIterations(count: Int) {
         context.dataStore.edit { preferences ->
             preferences[interactiveMaxIterationsKey] = count.coerceIn(1, 10)
+        }
+    }
+
+    override val townPromptBlocks: Flow<List<PromptBlockConfig>> = context.dataStore.data
+        .map { preferences ->
+            val jsonStr = preferences[townPromptBlocksKey]
+            val defaults = PromptBlockDefaults.townBlocks()
+            val saved = if (jsonStr != null) {
+                try {
+                    json.decodeFromString(ListSerializer(PromptBlockConfig.serializer()), jsonStr)
+                } catch (_: Exception) {
+                    defaults
+                }
+            } else {
+                defaults
+            }
+            mergeBlocksWithDefaults(saved, defaults)
+        }
+
+    override suspend fun setTownPromptBlocks(blocks: List<PromptBlockConfig>) {
+        context.dataStore.edit { preferences ->
+            preferences[townPromptBlocksKey] =
+                json.encodeToString(ListSerializer(PromptBlockConfig.serializer()), blocks)
+        }
+    }
+
+    override val townMaxIterations: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[townMaxIterationsKey] ?: 2
+        }
+
+    override suspend fun setTownMaxIterations(count: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[townMaxIterationsKey] = count.coerceIn(1, 5)
         }
     }
 

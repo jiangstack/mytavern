@@ -30,6 +30,11 @@ import org.jiangstack.mytavern.ui.interactive.InteractiveGameEditScreen
 import org.jiangstack.mytavern.ui.interactive.InteractiveGamePlayScreen
 import org.jiangstack.mytavern.ui.interactive.InteractiveGameAlbumScreen
 import org.jiangstack.mytavern.ui.interactive.InteractivePromptSettingsScreen
+import org.jiangstack.mytavern.ui.town.TownEditScreen
+import org.jiangstack.mytavern.ui.town.TownListScreen
+import org.jiangstack.mytavern.ui.town.TownPromptSettingsScreen
+import org.jiangstack.mytavern.ui.town.TownSceneScreen
+import org.jiangstack.mytavern.ui.town.TownScreen
 
 @Composable
 fun NavGraph(
@@ -171,6 +176,59 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+        composable(Screen.TownList.route) {
+            TownListScreen(
+                onNavigateToDetail = { townId ->
+                    navController.navigate(Screen.TownEdit.createRoute(townId))
+                },
+                onNavigateToPlay = { townId ->
+                    navController.navigate(Screen.TownDetail.createRoute(townId))
+                }
+            )
+        }
+
+        composable(Screen.TownEdit.route) { backStackEntry ->
+            val townId = backStackEntry.arguments?.getString("townId")?.toLongOrNull() ?: 0L
+            TownEditScreen(
+                townId = townId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.TownDetail.route) { backStackEntry ->
+            val townId = backStackEntry.arguments?.getString("townId")?.toLongOrNull() ?: 0L
+            TownScreen(
+                townId = townId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = {
+                    navController.navigate(Screen.TownEdit.createRoute(townId))
+                },
+                onNavigateToScene = { sceneId ->
+                    navController.navigate(Screen.TownScene.createRoute(townId, sceneId))
+                },
+                onNavigateToPromptSettings = {
+                    navController.navigate(Screen.TownPromptSettings.route)
+                }
+            )
+        }
+
+        composable(Screen.TownScene.route) { backStackEntry ->
+            val townId = backStackEntry.arguments?.getString("townId")?.toLongOrNull() ?: 0L
+            val sceneId = backStackEntry.arguments?.getString("sceneId")?.toLongOrNull() ?: 0L
+            TownSceneScreen(
+                townId = townId,
+                sceneId = sceneId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.TownPromptSettings.route) {
+            TownPromptSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateToLlmSettings = {

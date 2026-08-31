@@ -37,6 +37,17 @@ object PromptBlockDefaults {
             PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION ->
                 "请对用户的选择进行讲述后继续推进故事，关键选择时停止。并为用户的扮演角色提供2个行动选项。故事内容直接输出，不要加标题或解释。使用人名称呼角色，不使用人称代词。每次输出必须包含本内容和function call（更新状态）"
 
+            PromptBlockType.TOWN_SYSTEM_ROLE ->
+                "你是一个小镇生活模拟的导演。你负责演绎小镇中角色们相遇时发生的场景：语言生动自然，严格符合每个角色的性格、口吻与心情，体现角色之间的关系。"
+
+            PromptBlockType.TOWN_OUTPUT_INSTRUCTION ->
+                "请生成本场景的AVG式剧情。输出格式为多行文本，每行必须是以下四种格式之一：\n" +
+                    "【旁白】环境与情节描述\n" +
+                    "【对话|角色名】角色说的话\n" +
+                    "【动作|角色名】角色的动作描写\n" +
+                    "【心理|角色名】角色的内心活动\n" +
+                    "要求：只输出上述格式的行，不要输出任何其他内容；台词要符合角色的性格、心情和彼此关系；整个场景8到16行。若需要更新角色心情、角色间关系或记录重要事件，请调用提供的工具。"
+
             else -> null
         }
     }
@@ -86,5 +97,14 @@ object PromptBlockDefaults {
         PromptBlockConfig(PromptBlockType.INTERACTIVE_CURRENT_STATE, true, 8),
         PromptBlockConfig(PromptBlockType.INTERACTIVE_USER_CHOICE, true, 9),
         PromptBlockConfig(PromptBlockType.INTERACTIVE_OUTPUT_INSTRUCTION, true, 10)
+    )
+
+    fun townBlocks(): List<PromptBlockConfig> = listOf(
+        PromptBlockConfig(PromptBlockType.TOWN_SYSTEM_ROLE, true, 0),
+        PromptBlockConfig(PromptBlockType.TOWN_WORLD_SETTING, true, 1),
+        PromptBlockConfig(PromptBlockType.TOWN_CHARACTERS, true, 2),
+        PromptBlockConfig(PromptBlockType.TOWN_CURRENT_STATE, true, 3),
+        PromptBlockConfig(PromptBlockType.TOWN_RECENT_LOGS, true, 4),
+        PromptBlockConfig(PromptBlockType.TOWN_OUTPUT_INSTRUCTION, true, 5)
     )
 }

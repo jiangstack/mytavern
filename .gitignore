@@ -16,3 +16,5 @@ local.properties
 .idea
 *.log
 app/release
+.zcode
+.omp

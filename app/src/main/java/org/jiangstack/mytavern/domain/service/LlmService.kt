@@ -79,16 +79,19 @@ class LlmService(
                 ?: return@withContext Result.failure(IllegalStateException("没有可用的 LLM 配置"))
 
             val response = when (activeConfig.apiType) {
-                ApiType.OPENAI, ApiType.OPENRESPONSES -> {
-                    val requestMessages = mutableListOf(Message("system", systemPrompt))
-                    requestMessages.addAll(
-                        messages.map {
-                            Message(
-                                role = it.role ?: if (it.senderId == null) "user" else "assistant",
-                                content = formatMessageContent(it, userName)
-                            )
-                        }
-                    )
+            ApiType.OPENAI, ApiType.OPENRESPONSES -> {
+                val requestMessages = mutableListOf(Message("system", systemPrompt))
+                requestMessages.addAll(
+                    messages.map {
+                        val mapped = formatMessageContent(it, userName)
+                        Message(
+                            role = it.role ?: if (it.senderId == null) "user" else "assistant",
+                            content = if (it.toolCalls != null && mapped.isBlank()) null else mapped,
+                            tool_calls = it.toolCalls,
+                            tool_call_id = it.toolCallId
+                        )
+                    }
+                )
                     val request = ChatCompletionRequest(
                         model = activeConfig.model,
                         messages = requestMessages,
@@ -161,9 +164,12 @@ class LlmService(
                 val requestMessages = mutableListOf(Message("system", systemPrompt))
                 requestMessages.addAll(
                     messages.map {
+                        val mapped = formatMessageContent(it, userName, skipMessagePrefix)
                         Message(
                             role = it.role ?: if (it.senderId == null) "user" else "assistant",
-                            content = formatMessageContent(it, userName, skipMessagePrefix)
+                            content = if (it.toolCalls != null && mapped.isBlank()) null else mapped,
+                            tool_calls = it.toolCalls,
+                            tool_call_id = it.toolCallId
                         )
                     }
                 )

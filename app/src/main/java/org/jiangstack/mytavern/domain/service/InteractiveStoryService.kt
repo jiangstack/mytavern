@@ -164,7 +164,7 @@ class InteractiveStoryService(
                 return@flow
             }
 
-            chatMessages.add(ChatMessage(sessionId = 0, content = fullContent.toString(), role = "assistant"))
+            chatMessages.add(ChatMessage(sessionId = 0, content = fullContent.toString(), role = "assistant", toolCalls = toolCalls))
 
             for (tc in toolCalls!!) {
                 val args = try {
@@ -233,7 +233,7 @@ class InteractiveStoryService(
                 }
 
                 emit(StoryEvent.ToolResult(tc.function.name, result))
-                chatMessages.add(ChatMessage(sessionId = 0, content = result, role = "tool"))
+                chatMessages.add(ChatMessage(sessionId = 0, content = result, role = "tool", toolCallId = tc.id))
             }
         }
 

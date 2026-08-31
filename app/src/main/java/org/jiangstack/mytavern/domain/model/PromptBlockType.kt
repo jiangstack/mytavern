@@ -27,5 +27,11 @@ enum class PromptBlockType(val displayName: String, val editable: Boolean) {
     INTERACTIVE_STORY_CONTENT("故事内容", false),
     INTERACTIVE_CURRENT_STATE("当前状态", false),
     INTERACTIVE_USER_CHOICE("用户选择", false),
-    INTERACTIVE_OUTPUT_INSTRUCTION("输出要求", true)
+    INTERACTIVE_OUTPUT_INSTRUCTION("输出要求", true),
+    TOWN_SYSTEM_ROLE("小镇系统角色", true),
+    TOWN_WORLD_SETTING("小镇设定", false),
+    TOWN_CHARACTERS("小镇角色", false),
+    TOWN_CURRENT_STATE("小镇当前状态", false),
+    TOWN_RECENT_LOGS("小镇日志", false),
+    TOWN_OUTPUT_INSTRUCTION("小镇输出要求", true)
 }
